@@ -174,14 +174,11 @@ export default function MapComponent({
 
     mapInstanceRef.current = map;
 
-    // Load initial tile layer based on current theme
-    const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-
+    // Load CartoDB Positron (completely NO labels, only geography)
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/positron_nolabels/{z}/{x}/{y}{r}.png';
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 19,
+      attribution: '&copy; CartoDB &copy; OpenStreetMap contributors'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -190,16 +187,8 @@ export default function MapComponent({
     map.getPane('labels').style.zIndex = 450;
     map.getPane('labels').style.pointerEvents = 'none';
 
-    // Add labels layer
-    const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
-
-    const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      pane: 'labels'
-    }).addTo(map);
+    // No raster label layer - all labels are custom HTML from GeoJSON
+    const labelsLayer = null;
 
     labelsLayerRef.current = labelsLayer;
 
@@ -237,6 +226,22 @@ export default function MapComponent({
                 if (v) onSelectCountry(name);
               }
             });
+
+            // Add country name label - clean custom HTML label from GeoJSON
+            if (name) {
+              const bounds = layer.getBounds();
+              const center = bounds.getCenter();
+              const countryLabel = L.marker(center, {
+                icon: L.divIcon({
+                  className: 'country-label',
+                  html: `<span>${name}</span>`,
+                  iconSize: [100, 20],
+                  iconAnchor: [50, 10],
+                  pointerEvents: 'none'
+                }),
+                pane: 'labels'
+              }).addTo(map);
+            }
           }
         }).addTo(map);
 
@@ -310,29 +315,20 @@ export default function MapComponent({
       mapInstanceRef.current.removeLayer(labelsLayerRef.current);
     }
 
-    const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-
+    // Use CartoDB Positron (completely NO labels - only geography outlines)
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/positron_nolabels/{z}/{x}/{y}{r}.png';
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 19,
+      attribution: '&copy; CartoDB &copy; OpenStreetMap contributors'
     }).addTo(mapInstanceRef.current);
 
     tileLayerRef.current = tileLayer;
 
-    // Add updated labels layer
-    const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
-
-    const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      pane: 'labels'
-    }).addTo(mapInstanceRef.current);
-
-    labelsLayerRef.current = labelsLayer;
+    // No raster label layer - all labels are custom HTML
+    if (labelsLayerRef.current) {
+      mapInstanceRef.current.removeLayer(labelsLayerRef.current);
+    }
+    labelsLayerRef.current = null;
 
     // Refresh geojson styles
     if (geojsonLayerRef.current) {
