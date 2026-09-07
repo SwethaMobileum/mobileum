@@ -1,12 +1,8 @@
-import { supabase } from './_lib/supabase.js';
+import { query } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase client not initialized' });
   }
 
   const { countryId, operatorId, section, fieldName, value, updatedBy, baselineValue } = req.body;
@@ -15,70 +11,45 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  const targetOperatorId = operatorId || 'Global';
+  const targetUpdatedBy = updatedBy || 'Anonymous';
+
   try {
     // 1. Fetch current override to use as old_value
-    const { data: existingData, error: fetchError } = await supabase
-      .from('country_overrides')
-      .select('value')
-      .eq('country_id', countryId)
-      .eq('operator_id', operatorId || 'Global')
-      .eq('section', section)
-      .eq('field_name', fieldName)
-      .maybeSingle();
+    const existingResult = await query(
+      `SELECT value FROM country_overrides 
+       WHERE country_id = $1 AND operator_id = $2 AND section = $3 AND field_name = $4`,
+      [countryId, targetOperatorId, section, fieldName]
+    );
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching existing override:', fetchError);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    const oldValue = existingData ? existingData.value : baselineValue;
+    const oldValue = existingResult.rows.length > 0 ? existingResult.rows[0].value : (baselineValue !== undefined ? baselineValue : null);
 
     // 2. Upsert into country_overrides
-    const { error: upsertError } = await supabase
-      .from('country_overrides')
-      .upsert({
-        country_id: countryId,
-        operator_id: operatorId || 'Global',
-        section: section,
-        field_name: fieldName,
-        value: value,
-        updated_by: updatedBy || 'Anonymous',
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'country_id, operator_id, section, field_name'
-      });
-
-    if (upsertError) {
-      console.error('Error upserting override:', upsertError);
-      return res.status(500).json({ error: 'Database error' });
-    }
+    await query(
+      `INSERT INTO country_overrides (country_id, operator_id, section, field_name, value, updated_by, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (country_id, operator_id, section, field_name)
+       DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+      [countryId, targetOperatorId, section, fieldName, typeof value === 'object' ? JSON.stringify(value) : value, targetUpdatedBy]
+    );
 
     console.log("Attempting to insert into change_history:", {
       country_id: countryId,
-      operator_id: operatorId || 'Global',
-      section: section,
+      operator_id: targetOperatorId,
+      section,
       field_name: fieldName,
       old_value: oldValue,
       new_value: value
     });
 
-    const { error: historyError } = await supabase
-      .from('change_history')
-      .insert({
-        country_id: countryId,
-        operator_id: operatorId || 'Global',
-        section: section,
-        field_name: fieldName,
-        old_value: oldValue,
-        new_value: value,
-        created_at: new Date().toISOString()
-      });
+    // 3. Insert into change_history
+    await query(
+      `INSERT INTO change_history (country_id, operator_id, section, field_name, old_value, new_value, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [countryId, targetOperatorId, section, fieldName, typeof oldValue === 'object' ? JSON.stringify(oldValue) : oldValue, typeof value === 'object' ? JSON.stringify(value) : value]
+    );
 
-    if (historyError) {
-      console.error('Error inserting history:', historyError);
-    } else {
-      console.log('Successfully inserted into change_history');
-    }
+    console.log('Successfully inserted into change_history');
 
     return res.status(200).json({ success: true });
   } catch (err) {

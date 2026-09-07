@@ -6,7 +6,6 @@ import ComparisonModal from './components/ComparisonModal';
 import { exportReport, getFlagEmoji } from './utils/exportReport';
 import { exportPPT } from './utils/exportPPT';
 import CountryFlag from './components/CountryFlag';
-import TELECOM_DATA from './data/master_telecom.json';
 
 // =====================================================================
 // ILLUSTRATIVE / SYNTHETIC SAMPLE DATA — NOT REAL.
@@ -196,13 +195,42 @@ const CLUSTER_COLORS = {
 };
 const TIER_ORDER = { Frontier: 0, Emerging: 1, Growth: 2, Mature: 3, Advanced: 4 };
 
-export default function App() {
-  const { countries: rawCountries, metadata: rawMetadata } = TELECOM_DATA;
+const DEFAULT_METADATA = {
+  total_countries: 193,
+  regions: ["APAC", "Africa", "Europe", "LATAM", "MENA"],
+  global_averages: {
+    mobile_penetration: 113.7,
+    gdp_growth: 2.91,
+    avg_age: 30.28,
+    avg_5g: 32.18,
+    roaming_intensity: 3.51,
+    fraud_score: 2.74
+  }
+};
 
-  // Map MECA to MENA dynamically
+export default function App() {
+  const [loadedCountries, setLoadedCountries] = useState({});
+  const [metadata, setMetadata] = useState(DEFAULT_METADATA);
+
+  // Fetch initial metadata
+  useEffect(() => {
+    fetch('/api/get-operator-data?meta=true')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.regions) {
+          setMetadata(prev => ({
+            ...prev,
+            total_countries: data.total_countries || prev.total_countries,
+            regions: data.regions.map(r => r === 'MECA' ? 'MENA' : r)
+          }));
+        }
+      })
+      .catch(err => console.error("Metadata fetch error:", err));
+  }, []);
+
   const countries = useMemo(() => {
     const result = {};
-    Object.entries(rawCountries).forEach(([name, c]) => {
+    Object.entries(loadedCountries).forEach(([name, c]) => {
       result[name] = {
         ...c,
         region: c.region ? c.region.replace(/MECA/g, 'MENA') : c.region,
@@ -211,14 +239,7 @@ export default function App() {
       };
     });
     return result;
-  }, [rawCountries]);
-
-  const metadata = useMemo(() => {
-    return {
-      ...rawMetadata,
-      regions: [...new Set(rawMetadata.regions.map(r => r === 'MECA' ? 'MENA' : r))]
-    };
-  }, [rawMetadata]);
+  }, [loadedCountries]);
 
   const buildOperatorInsight = (countryName, op) => {
     if (!op) return null;
@@ -559,6 +580,35 @@ export default function App() {
 
   const [theme, setTheme] = useState('light');
   const [selectedCountry, setSelectedCountry] = useState(null);
+
+  // Fetch single country data dynamically from API route
+  useEffect(() => {
+    if (!selectedCountry) return;
+    const cName = typeof selectedCountry === 'object' ? (selectedCountry.country_name || selectedCountry.country) : selectedCountry;
+    if (!cName || loadedCountries[cName]) return;
+
+    fetch(`/api/get-operator-data?country=${encodeURIComponent(cName)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.country) {
+          const countryObj = {
+            ...data.country,
+            operators: (data.operators || []).map(op => {
+              if (typeof op.impact_analysis === 'object' && op.impact_analysis) {
+                return { ...op.impact_analysis, ...op, operator: op.operator_name || op.operator };
+              }
+              return { ...op, operator: op.operator_name || op.operator };
+            })
+          };
+          setLoadedCountries(prev => ({
+            ...prev,
+            [cName]: countryObj
+          }));
+        }
+      })
+      .catch(err => console.error(`Error fetching country data for ${cName}:`, err));
+  }, [selectedCountry, loadedCountries]);
+
   const [currentLens, setCurrentLens] = useState('cluster');
   const [activeRegion, setActiveRegion] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

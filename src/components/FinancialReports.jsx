@@ -1,14 +1,12 @@
 import React from 'react';
-import FIN from '../data/operator_financials.json';
 import OperatorPerformanceTracker from './OperatorPerformanceTracker';
 
 /*
  * FinancialReports
  * ----------------
  * Real, sourced, GROUP-LEVEL financials where the operator belongs to a
- * disclosed parent group (see src/data/operator_financials.json). Operators
- * with no public group-level disclosure show an honest "Not disclosed" state
- * instead of invented numbers.
+ * disclosed parent group. Operators with no public group-level disclosure show an
+ * honest "Not disclosed" state instead of invented numbers.
  *
  * The quarterly split lower down is clearly labelled ILLUSTRATIVE sample data
  * — operators do not publish per-quarter standalone splits, so it is shown as
@@ -18,11 +16,12 @@ import OperatorPerformanceTracker from './OperatorPerformanceTracker';
 // Resolve an operator name -> group financials. Exact map first, then the same
 // parent-prefix heuristic used to build the dataset, so unmapped members of a
 // known group still resolve.
-function resolveGroup(operator) {
+function resolveGroup(operator, finDataProp) {
+  const FIN = finDataProp || { groups: {}, operator_to_group: {} };
   if (!operator) return null;
   const op = String(operator).trim();
-  const grpKey = FIN.operator_to_group[op];
-  if (grpKey && FIN.groups[grpKey]) return FIN.groups[grpKey];
+  const grpKey = FIN.operator_to_group ? FIN.operator_to_group[op] : null;
+  if (grpKey && FIN.groups && FIN.groups[grpKey]) return FIN.groups[grpKey];
 
   const low = op.toLowerCase();
   const prefixes = [

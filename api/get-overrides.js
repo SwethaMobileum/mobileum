@@ -1,12 +1,8 @@
-import { supabase } from './_lib/supabase.js';
+import { query } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase client not initialized' });
   }
 
   const { countryId, operatorId } = req.query;
@@ -16,20 +12,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('country_overrides')
-      .select('section, field_name, value')
-      .eq('country_id', countryId)
-      .eq('operator_id', operatorId || 'Global');
-
-    if (error) {
-      console.error('Error fetching overrides:', error);
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const result = await query(
+      `SELECT section, field_name, value 
+       FROM country_overrides 
+       WHERE country_id = $1 AND operator_id = $2`,
+      [countryId, operatorId || 'Global']
+    );
 
     // Transform into a nested object: { [section]: { [fieldName]: value } }
     const overrides = {};
-    for (const row of (data || [])) {
+    for (const row of result.rows) {
       if (!overrides[row.section]) {
         overrides[row.section] = {};
       }

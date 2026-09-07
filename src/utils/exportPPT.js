@@ -1,6 +1,5 @@
 import pptxgen from 'pptxgenjs';
 import { getFlagEmoji } from './exportReport';
-import FIN from '../data/operator_financials.json';
 
 /**
  * exportPPT - Generates a multi-slide PowerPoint (.pptx) presentation for operator details / country market.
@@ -16,6 +15,8 @@ export function exportPPT(currentCountry, countryData, metadata, selectedOperato
     alert('Please select a country first to export its PowerPoint presentation.');
     return;
   }
+
+  const FIN = extraData.groupFinancials || extraData.financials || { groups: {} };
 
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_16x9';

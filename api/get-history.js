@@ -1,12 +1,8 @@
-import { supabase } from './_lib/supabase.js';
+import { query } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase client not initialized' });
   }
 
   const { countryId, operatorId } = req.query;
@@ -18,21 +14,16 @@ export default async function handler(req, res) {
   try {
     console.log("Fetching history for:", { countryId, operatorId });
     
-    const { data, error } = await supabase
-      .from('change_history')
-      .select('*')
-      .eq('country_id', countryId)
-      .eq('operator_id', operatorId || 'Global')
-      .order('created_at', { ascending: false });
+    const result = await query(
+      `SELECT * FROM change_history 
+       WHERE country_id = $1 AND operator_id = $2 
+       ORDER BY created_at DESC`,
+      [countryId, operatorId || 'Global']
+    );
 
-    console.log("Supabase history fetch result:", { dataLength: data ? data.length : 0, error });
+    console.log("PostgreSQL history fetch result length:", result.rows.length);
 
-    if (error) {
-      console.error('Error fetching history:', error);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    return res.status(200).json(data || []);
+    return res.status(200).json(result.rows || []);
   } catch (err) {
     console.error('Unexpected error in get-history:', err);
     return res.status(500).json({ error: 'Internal server error' });

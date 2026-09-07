@@ -11,7 +11,6 @@ import FinancialAnalysisModal from './FinancialAnalysisModal';
 import CollapsibleList from './CollapsibleList';
 import DashboardHeader from './DashboardHeader';
 import CustomerContactsSection from './CustomerContactsSection';
-import FIN from '../data/operator_financials.json';
 
 const CLUSTER_COLORS = {
   'Frontier': '#E74C3C',
@@ -1582,10 +1581,11 @@ export default function DynamicCenterDashboard({
 
                         {/* Live Investor Results & 3-Year Web Intelligence Banner */}
                         {(() => {
+                          const FIN = finData || { groups: {}, operator_to_group: {} };
                           const targetName = selectedOperator || accountData?.name || (typeof selectedCountry === 'object' ? selectedCountry?.country_name : selectedCountry) || 'Operator';
-                          const grpKey = FIN.operator_to_group[targetName];
-                          let gObj = grpKey ? FIN.groups[grpKey] : null;
-                          if (!gObj) {
+                          const grpKey = FIN.operator_to_group ? FIN.operator_to_group[targetName] : null;
+                          let gObj = grpKey && FIN.groups ? FIN.groups[grpKey] : null;
+                          if (!gObj && FIN.groups) {
                             const low = String(targetName).toLowerCase();
                             for (const [k, v] of Object.entries(FIN.groups)) {
                               if (low.includes(k.toLowerCase()) || k.toLowerCase().includes(low)) {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
-import FIN from '../data/operator_financials.json';
 import OperatorPerformanceTracker from './OperatorPerformanceTracker';
 
 function FinancialChart({ activeTab, isRevenue }) {
@@ -225,10 +224,11 @@ export default function FinancialAnalysisModal({
       : (accountData?.financialSection?.capexInvestment || '$2.8M Capex Enabled');
 
   // Dynamically resolve operator group info
+  const FIN = finData || { groups: {}, operator_to_group: {} };
   const targetSearch = targetOperator || countryName || '';
-  const grpKey = FIN.operator_to_group[targetSearch];
-  let gObj = grpKey ? FIN.groups[grpKey] : null;
-  if (!gObj && targetSearch) {
+  const grpKey = FIN.operator_to_group ? FIN.operator_to_group[targetSearch] : null;
+  let gObj = grpKey && FIN.groups ? FIN.groups[grpKey] : null;
+  if (!gObj && targetSearch && FIN.groups) {
     const low = String(targetSearch).toLowerCase();
     for (const [k, v] of Object.entries(FIN.groups)) {
       if (low.includes(k.toLowerCase()) || k.toLowerCase().includes(low)) {

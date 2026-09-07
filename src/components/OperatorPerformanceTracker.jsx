@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { OPERATOR_TRACKER_DATA, calculateTrend } from '../data/operator_performance_tracker';
-import TELECOM_DATA from '../data/master_telecom.json';
 
 const COLOR_PALETTE = ['#ef4444', '#0284c7', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#6366f1'];
 
@@ -111,10 +110,7 @@ export default function OperatorPerformanceTracker({
   filterSingleOperator = false
 }) {
   // Resolve list of operators for current country
-  let countryOps = operators;
-  if (!countryOps && TELECOM_DATA?.countries?.[countryName]?.operators) {
-    countryOps = TELECOM_DATA.countries[countryName].operators;
-  }
+  let countryOps = operators || [];
 
   // Fall back to all known groups or default list if empty
   let availableOperators = [];
