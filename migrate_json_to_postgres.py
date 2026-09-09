@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import psycopg2
-from psycopg2.extras import Json
+from psycopg2.extras import Json, execute_values
 
 def load_env_local():
     """Load DATABASE_URL from .env.local or src/.env.local if present."""
@@ -27,7 +27,6 @@ def main():
     if not db_url or 'your-postgres-connection-string' in db_url:
         print("Error: DATABASE_URL is not set or contains placeholder value.")
         print("Usage: python migrate_json_to_postgres.py [DATABASE_URL]")
-        print("Example: python migrate_json_to_postgres.py postgresql://postgres:password@localhost:5432/postgres")
         sys.exit(1)
 
     print(f"Connecting to PostgreSQL database...")
@@ -114,7 +113,8 @@ def main():
         countries_dict = telecom_data.get('countries', {})
         print(f"Found {len(countries_dict)} countries to migrate.")
 
-        op_name_to_id = {}
+        countries_rows = []
+        operators_rows = []
 
         for country_key, c_data in countries_dict.items():
             country_id = c_data.get('country', country_key)
@@ -122,32 +122,52 @@ def main():
             region = c_data.get('region')
             gdp_per_capita = c_data.get('gdp_per_capita_usd')
 
-            cur.execute("""
-                INSERT INTO countries (country_id, country_name, region, gdp_per_capita)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (country_id) DO UPDATE 
-                SET country_name = EXCLUDED.country_name,
-                    region = EXCLUDED.region,
-                    gdp_per_capita = EXCLUDED.gdp_per_capita;
-            """, (country_id, country_name, region, gdp_per_capita))
+            countries_rows.append((country_id, country_name, region, gdp_per_capita))
 
             for op in c_data.get('operators', []):
                 op_name = op.get('operator')
                 sub_count = op.get('sub_base_mln')
                 five_g = op.get('fiveG_pct')
                 impact_analysis = Json(op)
+                operators_rows.append((country_id, op_name, sub_count, five_g, impact_analysis))
 
-                cur.execute("""
-                    INSERT INTO operators (country_id, operator_name, subscriber_count, five_g_penetration_pct, impact_analysis)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING operator_id;
-                """, (country_id, op_name, sub_count, five_g, impact_analysis))
-                
-                op_id = cur.fetchone()[0]
+        # Insert countries in batch
+        print("Inserting countries batch...")
+        execute_values(cur, """
+            INSERT INTO countries (country_id, country_name, region, gdp_per_capita)
+            VALUES %s
+            ON CONFLICT (country_id) DO UPDATE 
+            SET country_name = EXCLUDED.country_name,
+                region = EXCLUDED.region,
+                gdp_per_capita = EXCLUDED.gdp_per_capita;
+        """, countries_rows)
+        conn.commit()
+        print(f"Migrated {len(countries_rows)} countries.")
+
+        # Insert operators in batch and get returned IDs
+        print("Inserting operators batch...")
+        op_name_to_id = {}
+        
+        # Truncate existing operators to avoid duplicates on re-runs
+        cur.execute("TRUNCATE TABLE operator_financials_5y, operators RESTART IDENTITY CASCADE;")
+        conn.commit()
+
+        # Batch insert operators in chunks of 500
+        chunk_size = 500
+        for i in range(0, len(operators_rows), chunk_size):
+            chunk = operators_rows[i:i + chunk_size]
+            query_str = """
+                INSERT INTO operators (country_id, operator_name, subscriber_count, five_g_penetration_pct, impact_analysis)
+                VALUES %s
+                RETURNING operator_id, country_id, operator_name;
+            """
+            returned_rows = execute_values(cur, query_str, chunk, fetch=True)
+            for op_id, c_id, op_name in returned_rows:
                 op_name_to_id[op_name] = op_id
+                op_name_to_id[f"{c_id}:{op_name}"] = op_id
 
         conn.commit()
-        print(f"Migrated {len(op_name_to_id)} operators.")
+        print(f"Migrated {len(operators_rows)} operators.")
 
         # 3. Populate financials from operator_financials.json
         if os.path.exists(fin_path):
@@ -158,18 +178,16 @@ def main():
             groups = fin_data.get('groups', {})
             op_to_grp = fin_data.get('operator_to_group', {})
 
-            fin_count = 0
+            fin_rows = []
             for op_name, grp_name in op_to_grp.items():
                 if op_name in op_name_to_id and grp_name in groups:
                     grp = groups[grp_name]
                     op_id = op_name_to_id[op_name]
                     
-                    # 3-year performance history if available
                     perf = grp.get('performance_trend_3yr', {})
                     if perf and isinstance(perf, dict) and 'history' in perf:
                         for entry in perf['history']:
                             yr_str = entry.get('year', '')
-                            # Extract numeric year
                             yr_num = None
                             for word in yr_str.split():
                                 if word.isdigit() and len(word) == 4:
@@ -177,24 +195,18 @@ def main():
                                     break
                             
                             rev = grp.get('revenue_usd_bn')
-                            ebitda = None
-                            capex = None
-
-                            cur.execute("""
-                                INSERT INTO operator_financials_5y (operator_id, year, revenue_usd_b, ebitda_usd_b, capex_usd_b)
-                                VALUES (%s, %s, %s, %s, %s);
-                            """, (op_id, yr_num or 2024, rev, ebitda, capex))
-                            fin_count += 1
+                            fin_rows.append((op_id, yr_num or 2024, rev, None, None))
                     else:
                         rev = grp.get('revenue_usd_bn')
-                        cur.execute("""
-                            INSERT INTO operator_financials_5y (operator_id, year, revenue_usd_b, ebitda_usd_b, capex_usd_b)
-                            VALUES (%s, %s, %s, %s, %s);
-                        """, (op_id, 2024, rev, None, None))
-                        fin_count += 1
+                        fin_rows.append((op_id, 2024, rev, None, None))
 
-            conn.commit()
-            print(f"Migrated {fin_count} financial records.")
+            if fin_rows:
+                execute_values(cur, """
+                    INSERT INTO operator_financials_5y (operator_id, year, revenue_usd_b, ebitda_usd_b, capex_usd_b)
+                    VALUES %s;
+                """, fin_rows)
+                conn.commit()
+                print(f"Migrated {len(fin_rows)} financial records.")
 
     print("\nDatabase migration completed successfully!")
     cur.close()
@@ -202,3 +214,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

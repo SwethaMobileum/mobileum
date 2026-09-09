@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import OperatorPerformanceTracker from './OperatorPerformanceTracker';
+import finData from '../data/operator_financials.json';
 
 function FinancialChart({ activeTab, isRevenue }) {
   let labels = [];
@@ -144,15 +145,15 @@ function FinancialChart({ activeTab, isRevenue }) {
           })}
 
           {/* SVG Overlay Line Curves */}
-          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
             {[series1, series2].map((ser, sIdx) => {
               if (!ser.isLine || !ser.values || ser.values.length === 0) return null;
               const pts = labels.map((_, i) => {
                 const x = ((i + 0.5) / labels.length) * 100;
-                const y = 100 - Math.min(100, Math.max(2, ((ser.values[i] || 0) / maxVal) * 100));
-                return `${x}%,${y}%`;
+                const rawY = 100 - Math.min(95, Math.max(5, ((ser.values[i] || 0) / maxVal) * 100));
+                return { x: Number(x.toFixed(2)), y: Number(rawY.toFixed(2)), val: ser.values[i] };
               });
-              const pathD = pts.reduce((acc, pt, i) => (i === 0 ? `M ${pt}` : `${acc} L ${pt}`), '');
+              const pathD = pts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '');
 
               return (
                 <g key={sIdx}>
@@ -160,25 +161,45 @@ function FinancialChart({ activeTab, isRevenue }) {
                     d={pathD}
                     fill="none"
                     stroke={ser.color}
-                    strokeWidth="2.5"
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
                     strokeDasharray={ser.isDashed ? '4 4' : 'none'}
                   />
-                  {labels.map((_, i) => {
-                    const cx = `${((i + 0.5) / labels.length) * 100}%`;
-                    const cy = `${100 - Math.min(100, Math.max(2, ((ser.values[i] || 0) / maxVal) * 100))}%`;
-                    return (
-                      <g key={i}>
-                        <circle cx={cx} cy={cy} r="4" fill="#ffffff" stroke={ser.color} strokeWidth="2.5" />
-                        <text x={cx} y={`calc(${cy} - 7px)`} textAnchor="middle" fontSize="9" fontWeight="800" fill={ser.color}>
-                          ${ser.values[i]}
-                        </text>
-                      </g>
-                    );
-                  })}
+                  {pts.map((pt, i) => (
+                    <circle key={i} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke={ser.color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  ))}
                 </g>
               );
             })}
           </svg>
+
+          {/* HTML Overlay Text Labels for Line Chart Points */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
+            {[series1, series2].map((ser, sIdx) => {
+              if (!ser.isLine || !ser.values || ser.values.length === 0) return null;
+              return labels.map((_, i) => {
+                const x = ((i + 0.5) / labels.length) * 100;
+                const rawY = 100 - Math.min(95, Math.max(5, ((ser.values[i] || 0) / maxVal) * 100));
+                return (
+                  <div
+                    key={`${sIdx}-${i}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${x}%`,
+                      top: `${rawY}%`,
+                      transform: 'translate(-50%, -130%)',
+                      fontSize: '9px',
+                      fontWeight: '800',
+                      color: ser.color,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    ${ser.values[i]}
+                  </div>
+                );
+              });
+            })}
+          </div>
         </div>
       </div>
 

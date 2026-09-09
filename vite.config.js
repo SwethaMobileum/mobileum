@@ -9,6 +9,10 @@ const vercelApiMock = () => {
   return {
     name: 'vercel-api-mock',
     configureServer(server) {
+      // Pre-load environment variables at server start
+      const initialEnv = loadEnv(server.config.mode || 'development', process.cwd(), '');
+      Object.assign(process.env, initialEnv);
+
       server.middlewares.use(async (req, res, next) => {
         if (req.url.startsWith('/api/')) {
           try {
@@ -16,12 +20,9 @@ const vercelApiMock = () => {
             const modulePath = path.resolve('.' + urlPath + '.js');
             
             if (fs.existsSync(modulePath)) {
-              let body = '';
-              req.on('data', chunk => { body += chunk.toString(); });
-              
-              req.on('end', async () => {
-                if (body) {
-                  try { req.body = JSON.parse(body); } catch(e) { req.body = body; }
+              const handleRequest = async (bodyData) => {
+                if (bodyData) {
+                  try { req.body = JSON.parse(bodyData); } catch(e) { req.body = bodyData; }
                 }
                 
                 const query = {};
@@ -34,11 +35,9 @@ const vercelApiMock = () => {
                 req.query = query;
 
                 try {
-                  // Load environment variables for local backend
-                  const env = loadEnv(server.config.mode, process.cwd(), '');
+                  const env = loadEnv(server.config.mode || 'development', process.cwd(), '');
                   Object.assign(process.env, env);
 
-                  // Dynamically import the Vercel function
                   const moduleUrl = pathToFileURL(modulePath).href + '?t=' + Date.now();
                   const { default: handler } = await import(moduleUrl);
                   
@@ -54,7 +53,15 @@ const vercelApiMock = () => {
                   res.statusCode = 500;
                   res.end(JSON.stringify({ error: err.message }));
                 }
-              });
+              };
+
+              if (req.method === 'GET' || req.method === 'HEAD') {
+                await handleRequest();
+              } else {
+                let body = '';
+                req.on('data', chunk => { body += chunk.toString(); });
+                req.on('end', () => handleRequest(body));
+              }
               return;
             }
           } catch(e) {

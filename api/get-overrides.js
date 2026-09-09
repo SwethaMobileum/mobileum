@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(overrides);
   } catch (err) {
-    console.error('Unexpected error in get-overrides:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.warn('Unexpected error in get-overrides:', err.message);
+    return res.status(200).json({});
   }
 }

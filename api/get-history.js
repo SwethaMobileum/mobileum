@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result.rows || []);
   } catch (err) {
-    console.error('Unexpected error in get-history:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.warn('Unexpected error in get-history:', err.message);
+    return res.status(200).json([]);
   }
 }

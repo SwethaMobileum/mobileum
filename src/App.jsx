@@ -6,6 +6,7 @@ import ComparisonModal from './components/ComparisonModal';
 import { exportReport, getFlagEmoji } from './utils/exportReport';
 import { exportPPT } from './utils/exportPPT';
 import CountryFlag from './components/CountryFlag';
+import masterData from './data/master_telecom.json';
 
 // =====================================================================
 // ILLUSTRATIVE / SYNTHETIC SAMPLE DATA — NOT REAL.
@@ -209,7 +210,7 @@ const DEFAULT_METADATA = {
 };
 
 export default function App() {
-  const [loadedCountries, setLoadedCountries] = useState({});
+  const [loadedCountries, setLoadedCountries] = useState(masterData.countries || {});
   const [metadata, setMetadata] = useState(DEFAULT_METADATA);
 
   // Fetch initial metadata
@@ -585,15 +586,22 @@ export default function App() {
   useEffect(() => {
     if (!selectedCountry) return;
     const cName = typeof selectedCountry === 'object' ? (selectedCountry.country_name || selectedCountry.country) : selectedCountry;
-    if (!cName || loadedCountries[cName]) return;
+    if (!cName) return;
+
+    if (loadedCountries[cName] && loadedCountries[cName].isDbFetched) return;
 
     fetch(`/api/get-operator-data?country=${encodeURIComponent(cName)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && data.country) {
           const countryObj = {
+            ...(loadedCountries[cName] || {}),
             ...data.country,
-            operators: (data.operators || []).map(op => {
+            isDbFetched: true,
+            operators: (data.operators && data.operators.length > 0
+              ? data.operators
+              : (loadedCountries[cName]?.operators || [])
+            ).map(op => {
               if (typeof op.impact_analysis === 'object' && op.impact_analysis) {
                 return { ...op.impact_analysis, ...op, operator: op.operator_name || op.operator };
               }

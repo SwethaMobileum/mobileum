@@ -11,6 +11,7 @@ import FinancialAnalysisModal from './FinancialAnalysisModal';
 import CollapsibleList from './CollapsibleList';
 import DashboardHeader from './DashboardHeader';
 import CustomerContactsSection from './CustomerContactsSection';
+import finData from '../data/operator_financials.json';
 
 const CLUSTER_COLORS = {
   'Frontier': '#E74C3C',
