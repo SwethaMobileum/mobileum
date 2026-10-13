@@ -7,6 +7,11 @@ import { exportReport, getFlagEmoji } from './utils/exportReport';
 import { exportPPT } from './utils/exportPPT';
 import CountryFlag from './components/CountryFlag';
 import masterData from './data/master_telecom.json';
+import HealthOverview from './components/HealthOverview';
+import HealthDetail from './components/HealthDetail';
+import AccountExplorer from './components/AccountExplorer';
+import ScoringDocs from './components/ScoringDocs';
+import { fetchDataStatus } from './utils/healthApi';
 
 // =====================================================================
 // ILLUSTRATIVE / SYNTHETIC SAMPLE DATA — NOT REAL.
@@ -212,9 +217,13 @@ const DEFAULT_METADATA = {
 export default function App() {
   const [loadedCountries, setLoadedCountries] = useState(masterData.countries || {});
   const [metadata, setMetadata] = useState(DEFAULT_METADATA);
+  const [globalView, setGlobalView] = useState('market'); // 'market', 'health', 'explorer', 'scoring'
+  const [healthSelectedCustomer, setHealthSelectedCustomer] = useState(null);
+  const [dataStatus, setDataStatus] = useState(null);
 
-  // Fetch initial metadata
+  // Fetch initial metadata and status
   useEffect(() => {
+    fetchDataStatus().then(setDataStatus).catch(() => {});
     fetch('/api/get-operator-data?meta=true')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -374,25 +383,8 @@ export default function App() {
       status: msNeed.includes('high') ? 'Renewal Pending' : 'Active Support'
     });
 
-    const installedProductWiseSupportTicket = mobileumProducts.slice(0, 2).map((prod, i) => {
-      return {
-        product: prod,
-        tickets: Math.max(2, Math.round((op.sub_base_mln || 1.0) * 1.5 + (i * 3))),
-        trend: op.subscriber_growth_pct > 3 ? 'Improving' : 'Stable'
-      };
-    });
-
-    const usageOfInstalledProducts = mobileumProducts.slice(0, 2).map(prod => {
-      let usage = "Active deployment running at standard capacity (75%).";
-      if (prod.includes("Steering") || prod.includes("SoR")) {
-        usage = "85% of outbound steering workflows executed automatically.";
-      } else if (prod.includes("Fraud") || prod.includes("RAID")) {
-        usage = "92% of fraud bypass events captured and auto-analyzed.";
-      } else if (prod.includes("Active Testing")) {
-        usage = "Automated loop tests active across 30+ virtual destinations.";
-      }
-      return { product: prod, usage };
-    });
+    const installedProductWiseSupportTicket = [];
+    const usageOfInstalledProducts = [];
 
     return {
       productSection: {
@@ -933,7 +925,7 @@ export default function App() {
       const cData = countries[selectedCountry];
       let tickets = getDynamicCountryTickets(selectedCountry, cData);
 
-      const ops = cData?.operators || [];
+      let ops = cData?.operators || [];
       const amcs = [];
       ops.forEach((op, opIdx) => {
         const opInsight = buildOperatorInsight(selectedCountry, op);
@@ -955,6 +947,99 @@ export default function App() {
       if (selectedOperator) {
         const opData = ops.find(o => o.operator === selectedOperator);
         opInsight = buildOperatorInsight(selectedCountry, opData);
+        
+        // Phase 2 & 3: Integrate Account Explorer (SkyGeni) and Customer Health real mapped data
+        try {
+          // In mapping.xlsx and health data, the customer name is often a combination of operator and country (e.g. "STC Saudi Arabia")
+          // If selectedOperator doesn't already end with the country name, append it to form the logical customer name.
+          let logicalCustomer = selectedOperator;
+          const countryMap = {
+            'United States': 'USA',
+            'United Kingdom': 'UK',
+            'United Arab Emirates': 'UAE',
+            'JAPAN': 'Japan'
+          };
+          // Some map elements use all caps (e.g. JAPAN). Capitalize normally if not in map.
+          let mappedCountry = countryMap[selectedCountry] || selectedCountry;
+          if (mappedCountry === mappedCountry.toUpperCase() && mappedCountry.length > 3) {
+             mappedCountry = mappedCountry.charAt(0) + mappedCountry.slice(1).toLowerCase();
+          }
+          
+          const exactOperatorMatchOverrides = [
+            'Bayobab (MTN GlobalConnect)',
+            'Orange Middle East and Africa'
+          ];
+
+          if (exactOperatorMatchOverrides.includes(selectedOperator)) {
+             logicalCustomer = selectedOperator;
+          } else if (mappedCountry && !logicalCustomer.toLowerCase().includes(mappedCountry.toLowerCase())) {
+             logicalCustomer = `${selectedOperator} ${mappedCountry}`;
+          }
+          
+          const countryParam = encodeURIComponent(selectedCountry || '');
+          const [wsRes, healthRes] = await Promise.all([
+             fetch(`/api/white-space-customer?customer=${encodeURIComponent(selectedOperator)}&country=${countryParam}`),
+             fetch(`/api/customer-health-detail?customer=${encodeURIComponent(selectedOperator)}&country=${countryParam}`)
+          ]);
+          
+          if (wsRes.ok) {
+            const wsData = await wsRes.json();
+            
+            // Rebuild amcData using real SkyGeni business_units
+            if (wsData.business_units && wsData.business_units.length > 0) {
+              const newAmcs = [];
+              let contractCounter = 1;
+              wsData.business_units.filter(bu => bu.covered).forEach(bu => {
+                 newAmcs.push({
+                   contract_id: `AMC-SKYGENI-${contractCounter++}`,
+                   business_unit: bu.bu,
+                   client_name: selectedOperator,
+                   outstanding_amount: Math.round(Math.random() * 300000 + 100000), // AMC values are not in skygeni, using synthetic value but real BU presence
+                   due_date: '2026-12-31'
+                 });
+              });
+              amcs.length = 0; 
+              amcs.push(...newAmcs);
+              
+              // Inject SkyGeni products and peer suggestions into Account Profile
+              const allProducts = wsData.business_units.flatMap(b => b.products);
+              opInsight.productSection.mobileumProducts = allProducts;
+              opInsight.productSection.replaceableCompetitors = wsData.peer_suggestions.map(p => p.product_group);
+            }
+          }
+          
+          if (healthRes.ok) {
+            const healthData = await healthRes.json();
+            if (healthData.summary) {
+              opInsight.healthSection.customerHealth = healthData;
+              
+              if (healthData.business_units && healthData.business_units.length > 0) {
+                 const realTickets = healthData.business_units.map(bu => {
+                    const t = (bu.raw_data && bu.raw_data["Total S1+S2+S3 Tickets created last 3 months"]) || 0;
+                    const csat = (bu.raw_data && bu.raw_data["CSAT"]) || "Green";
+                    return {
+                       product: bu.bu_name_or_count,
+                       tickets: t,
+                       trend: csat === "Green" ? "Stable" : "Needs Attention"
+                    };
+                 });
+                 realTickets.sort((a,b) => b.tickets - a.tickets);
+                 
+                 opInsight.healthSection.installedProductWiseSupportTicket = realTickets;
+                 
+                 const usageMap = realTickets.map(bu => {
+                     return {
+                        product: bu.product,
+                        usage: `Active deployment for ${bu.product} BU. Monitoring performance and SLA metrics.`
+                     };
+                 });
+                 opInsight.healthSection.usageOfInstalledProducts = usageMap;
+              }
+            }
+          }
+        } catch(e) {
+          console.error("Failed to fetch skygeni or health data", e);
+        }
       }
 
       // Fetch overrides from backend
@@ -1122,16 +1207,16 @@ export default function App() {
           )}
         </div>
       </div>
-
-      {/* FILTER BAR */}
-      <div id="filterbar">
+          {/* FILTER BAR */}
+          <div id="filterbar">
         <span className="lens-label">MAP LENS:</span>
         {[
           { key: 'cluster', label: 'Market Cluster' },
           { key: 'fraud', label: 'Fraud Risk' },
           { key: 'fiveG', label: '5G Readiness' },
           { key: 'roaming', label: 'Roaming Intensity' },
-          { key: 'arpu', label: 'ARPU Pressure' }
+          { key: 'arpu', label: 'ARPU Pressure' },
+          { key: 'health', label: 'Health Score' }
         ].map(lens => (
           <button
             key={lens.key}
@@ -1232,10 +1317,15 @@ export default function App() {
                   activeRegion={activeRegion}
                   setActiveRegion={setActiveRegion}
                   onCloseOverview={() => { }}
-                  onExportReport={() => exportReport(selectedCountry, countries[selectedCountry], metadata, selectedOperator)}
+                  onExportReport={() => exportReport(selectedCountry, countries[selectedCountry], metadata, selectedOperator, {
+                    accountInsights: { [selectedCountry]: accountData },
+                    amcData: amcData,
+                    ticketData: MOCK_TICKETS[selectedCountry],
+                    competitors: MOCK_COMPETITORS
+                  })}
                   onExportPPT={() => exportPPT(selectedCountry, countries[selectedCountry], metadata, selectedOperator, {
-                    accountInsights: MOCK_ACCOUNT_INSIGHTS,
-                    amcData: MOCK_AMC[selectedCountry] || [],
+                    accountInsights: { [selectedCountry]: accountData },
+                    amcData: amcData,
                     ticketData: MOCK_TICKETS[selectedCountry],
                     competitors: MOCK_COMPETITORS
                   })}

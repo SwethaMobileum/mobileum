@@ -1,4 +1,5 @@
 import React from 'react';
+import { SampleDataBadge } from '../utils/dataProvenance';
 
 export default function OutstandingAMCTable({ amcData, isLoading }) {
   if (isLoading) {
@@ -15,7 +16,11 @@ export default function OutstandingAMCTable({ amcData, isLoading }) {
     <div className="section outstanding-amc-section" style={{ marginTop: '12px' }}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
         <div className="section-title" style={{ marginBottom: '16px' }}>
-          Outstanding AMC Table<span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--yellow)', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', padding: '2px 7px', borderRadius: '20px', marginLeft: '8px' }}>⚠ Illustrative sample — not real figures</span>
+          Outstanding AMC Table 
+          {amcData.some(a => a.contract_id.startsWith('AMC-SKYGENI')) ? 
+             <span style={{ fontSize: '9px', fontWeight: 700, color: '#059669', background: '#d1fae5', border: '1px solid #34d399', padding: '2px 7px', borderRadius: '20px', marginLeft: '8px' }}>✓ SOURCED DATA (SkyGeni)</span>
+             : <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--yellow)', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', padding: '2px 7px', borderRadius: '20px', marginLeft: '8px' }}>⚠ Illustrative sample — not real figures</span>
+          }
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="op-table amc-table" style={{ width: '100%' }}>

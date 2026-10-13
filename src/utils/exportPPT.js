@@ -456,25 +456,39 @@ export function exportPPT(currentCountry, countryData, metadata, selectedOperato
       { text: 'Amount', options: { bold: true, fill: 'F1F5F9' } },
       { text: 'Due Date', options: { bold: true, fill: 'F1F5F9' } }
     ],
-    [
-      { text: 'AMC-2026-001' },
-      { text: 'Risk (RAID 9)' },
-      { text: '$400,000' },
-      { text: '2026-08-31' }
-    ],
-    [
-      { text: 'AMC-2026-002' },
-      { text: 'Roaming Mgmt' },
-      { text: '$200,000' },
-      { text: '2026-07-15' }
-    ],
-    [
-      { text: 'AMC-2026-003' },
-      { text: 'Network Security' },
-      { text: '$150,000' },
-      { text: '2026-09-30' }
-    ]
   ];
+  
+  if (extraData.amcData && extraData.amcData.length > 0) {
+    extraData.amcData.forEach(amc => {
+      amcRows.push([
+        { text: amc.contract_id || 'N/A' },
+        { text: amc.business_unit || 'N/A' },
+        { text: amc.outstanding_amount ? `$${amc.outstanding_amount.toLocaleString()}` : 'N/A' },
+        { text: amc.due_date || 'N/A' }
+      ]);
+    });
+  } else {
+    amcRows.push(
+      [
+        { text: 'AMC-2026-001' },
+        { text: 'Risk (RAID 9)' },
+        { text: '$400,000' },
+        { text: '2026-08-31' }
+      ],
+      [
+        { text: 'AMC-2026-002' },
+        { text: 'Roaming Mgmt' },
+        { text: '$200,000' },
+        { text: '2026-07-15' }
+      ],
+      [
+        { text: 'AMC-2026-003' },
+        { text: 'Network Security' },
+        { text: '$150,000' },
+        { text: '2026-09-30' }
+      ]
+    );
+  }
 
   slide6.addTable(amcRows, {
     x: 0.4, y: 1.3, w: 4.4, h: 1.8,

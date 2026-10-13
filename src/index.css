@@ -1262,20 +1262,20 @@ html, body {
   }
 }
 
-.dynamic-center-content > .tab-content,
-.dynamic-center-panel > .tab-content {
-  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+.dynamic-center-content > .tab-content {
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Stagger animation delays for visual polish */
-.dynamic-center-content > *:nth-child(1),
-.dynamic-center-panel > *:nth-child(1) { animation-delay: 0.05s; }
-.dynamic-center-content > *:nth-child(2),
-.dynamic-center-panel > *:nth-child(2) { animation-delay: 0.1s; }
-.dynamic-center-content > *:nth-child(3),
-.dynamic-center-panel > *:nth-child(3) { animation-delay: 0.15s; }
-.dynamic-center-content > *:nth-child(4),
-.dynamic-center-panel > *:nth-child(4) { animation-delay: 0.2s; }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Styles for Ticket Dashboard Card and Table overrides */
 .ticket-dashboard-card {
@@ -1344,6 +1344,9 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes fadeIn {
@@ -2084,22 +2087,21 @@ html, body {
   border-color: var(--blue-light);
 }
 
-/* ── DYNAMIC AUTO-COLLAPSING STICKY HEADER ── */
+/* ── STABLE ELEVATED STICKY HEADER ── */
 .dynamic-header-wrapper {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
-  padding: 10px 16px 6px 16px;
+  padding: 10px 16px 8px 16px;
   position: sticky;
   top: 0;
   z-index: 30;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .dynamic-header-wrapper.is-scrolled {
-  padding: 6px 16px 4px 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border-bottom-color: var(--border2);
 }
 
 .tab-btn.compact {

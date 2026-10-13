@@ -607,9 +607,10 @@ export default function DynamicCenterDashboard({
   const [isScrolled, setIsScrolled] = useState(false);
 
   const handleScroll = (e) => {
-    if (e.target.scrollTop > 20) {
+    const top = e.target.scrollTop;
+    if (top > 30) {
       if (!isScrolled) setIsScrolled(true);
-    } else {
+    } else if (top < 10) {
       if (isScrolled) setIsScrolled(false);
     }
   };
@@ -1225,120 +1226,164 @@ export default function DynamicCenterDashboard({
                           const mobProds = accountData.productSection?.mobileumProducts || [];
                           const compProds = accountData.productSection?.competitionProducts || [];
                           const repComps = accountData.productSection?.replaceableCompetitors || [];
-                          
-                          // Condition: Mobileum products count is high and competition/replaceable competitors are low in count
-                          const isHighMobileumLowCompetitors = mobProds.length >= 6 && (compProds.length + repComps.length <= 4);
 
-                          const renderMobileumBox = () => (
-                            <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', height: '100%' }}>
-                              <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                                Mobileum Products
-                                {renderEditedBadge('mobileumProducts', accountData.productSection)}
-                              </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                {mobProds.map(item => (
-                                  <span key={item} style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--blue)', border: '1px solid rgba(37, 99, 235, 0.2)', borderRadius: '5px', padding: '3px 7px', fontSize: '10px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
+                          const mobCount = mobProds.length;
+                          const compCount = compProds.length;
+                          const repCount = repComps.length;
 
-                          const renderCompetitionBox = (flexStyle = {}) => (
-                            <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', ...flexStyle }}>
-                              <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                Competition Products
-                                {renderEditedBadge('competitionProducts', accountData.productSection)}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                {compProds.map((item, idx) => {
-                                  const name = typeof item === 'object' ? (item.name || '') : String(item);
-                                  const isSelected = typeof item === 'object' ? item.selected !== false : true;
-                                  return (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        fontSize: '10px',
-                                        fontWeight: '700',
-                                        color: isSelected ? '#b45309' : 'var(--red)',
-                                        background: isSelected ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-                                        border: `1px solid ${isSelected ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.25)'}`,
-                                        borderRadius: '6px',
-                                        padding: '5px 10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        gap: '8px'
-                                      }}
-                                    >
-                                      <span>{name}</span>
-                                      <div
-                                        style={{
-                                          width: '16px',
-                                          height: '16px',
-                                          borderRadius: '4px',
-                                          border: `1.5px solid ${isSelected ? '#b45309' : 'var(--red)'}`,
-                                          background: isSelected ? '#b45309' : 'transparent',
-                                          color: '#ffffff',
-                                          fontSize: '11px',
-                                          fontWeight: '900',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          flexShrink: 0
-                                        }}
-                                      >
-                                        {isSelected ? '✓' : ''}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
+                          // Dynamic content-aware column ratio computation:
+                          // Gives more horizontal space to tiles carrying heavier catalogs,
+                          // while clamping so smaller tiles remain readable and don't collapse.
+                          const w1 = Math.max(0.85, 0.85 + Math.sqrt(mobCount) * 0.75);
+                          const w2 = Math.max(0.65, 0.65 + (compCount > 0 ? Math.sqrt(compCount) * 0.6 : 0));
+                          const w3 = Math.max(0.70, 0.70 + Math.sqrt(repCount) * 0.7);
+                          const totalW = w1 + w2 + w3;
+                          const fr1 = Math.max(0.85, (w1 / totalW) * 3).toFixed(2);
+                          const fr2 = Math.max(0.55, (w2 / totalW) * 3).toFixed(2);
+                          const fr3 = Math.max(0.65, (w3 / totalW) * 3).toFixed(2);
 
-                          const renderReplaceableBox = (flexStyle = {}) => (
-                            <div style={{ background: 'var(--bg-card3)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '10px', ...flexStyle }}>
-                              <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                Competitors to Replace
-                                {renderEditedBadge('replaceableCompetitors', accountData.productSection)}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                {repComps.map((item, idx) => {
-                                  const raw = typeof item === 'object' ? (item.name || item.text || '') : String(item || '');
-                                  const shortName = raw.includes('—') ? raw.split('—')[0].trim() : raw.includes('-') ? raw.split('-')[0].trim() : raw.split(' ')[0].trim();
-                                  return (
-                                    <div key={idx} style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--red)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '5px', padding: '4px 8px', fontSize: '10px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                      <span style={{ fontSize: '11px', color: 'var(--red)' }}>•</span> {shortName}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-
-                          if (isHighMobileumLowCompetitors) {
-                            return (
-                              <div style={{ display: 'grid', gridTemplateColumns: '65% calc(35% - 10px)', gap: '10px' }}>
-                                {/* Left: 65% Mobileum Products */}
-                                {renderMobileumBox()}
-
-                                {/* Right: 35% Stacked Competition Products (Above) & Competitors to Replace (Below) */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                  {renderCompetitionBox()}
-                                  {renderReplaceableBox()}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // Default 3-column layout when competitor count is normal
                           return (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(200px, 1fr) minmax(150px, 1fr)', gap: '10px' }}>
-                              {renderMobileumBox()}
-                              {renderCompetitionBox()}
-                              {renderReplaceableBox()}
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: `minmax(240px, ${fr1}fr) minmax(160px, ${fr2}fr) minmax(160px, ${fr3}fr)`,
+                              gap: '10px',
+                              alignItems: 'stretch'
+                            }}>
+                              {/* Tile 1: Mobileum Products */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Mobileum Products</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.1)', padding: '1px 6px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {mobCount}
+                                  </span>
+                                  {renderEditedBadge('mobileumProducts', accountData.productSection)}
+                                </div>
+                                {mobCount > 0 ? (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                    {mobProds.map(item => (
+                                      <span key={item} style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--blue)', border: '1px solid rgba(37, 99, 235, 0.2)', borderRadius: '5px', padding: '3px 7px', fontSize: '10px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                        {item}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 2px' }}>
+                                    No products assigned
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Tile 2: Competition Products */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Competition Products</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#b45309', background: 'rgba(245, 158, 11, 0.15)', padding: '1px 6px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {compCount}
+                                  </span>
+                                  {renderEditedBadge('competitionProducts', accountData.productSection)}
+                                </div>
+                                {compCount > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    {compProds.map((item, idx) => {
+                                      const name = typeof item === 'object' ? (item.name || '') : String(item);
+                                      const isSelected = typeof item === 'object' ? item.selected !== false : true;
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            fontSize: '10px',
+                                            fontWeight: '700',
+                                            color: isSelected ? '#b45309' : 'var(--red)',
+                                            background: isSelected ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+                                            border: `1px solid ${isSelected ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.25)'}`,
+                                            borderRadius: '6px',
+                                            padding: '5px 8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: '6px'
+                                          }}
+                                        >
+                                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                                          <div
+                                            style={{
+                                              width: '15px',
+                                              height: '15px',
+                                              borderRadius: '4px',
+                                              border: `1.5px solid ${isSelected ? '#b45309' : 'var(--red)'}`,
+                                              background: isSelected ? '#b45309' : 'transparent',
+                                              color: '#ffffff',
+                                              fontSize: '10px',
+                                              fontWeight: '900',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              flexShrink: 0
+                                            }}
+                                          >
+                                            {isSelected ? '✓' : ''}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 2px' }}>
+                                    None recorded
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Tile 3: Competitors to Replace */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Competitors to Replace</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--red)', background: 'rgba(239, 68, 68, 0.1)', padding: '1px 6px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {repCount}
+                                  </span>
+                                  {renderEditedBadge('replaceableCompetitors', accountData.productSection)}
+                                </div>
+                                {repCount > 0 ? (
+                                  <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: repCount > 5 ? 'repeat(auto-fill, minmax(85px, 1fr))' : '1fr',
+                                    gap: '5px'
+                                  }}>
+                                    {repComps.map((item, idx) => {
+                                      const raw = typeof item === 'object' ? (item.name || item.text || '') : String(item || '');
+                                      const shortName = raw.includes('—') ? raw.split('—')[0].trim() : raw.includes('-') ? raw.split('-')[0].trim() : raw.split(' ')[0].trim();
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            background: 'rgba(239, 68, 68, 0.08)',
+                                            color: 'var(--red)',
+                                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                                            borderRadius: '5px',
+                                            padding: '4px 7px',
+                                            fontSize: '9.5px',
+                                            fontWeight: '600',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                          }}
+                                          title={raw}
+                                        >
+                                          <span style={{ fontSize: '10px', color: 'var(--red)', flexShrink: 0 }}>•</span>
+                                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 2px' }}>
+                                    None identified
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })()}
@@ -1357,57 +1402,141 @@ export default function DynamicCenterDashboard({
                           {accountData.productSection?.salesAngle?.narrative || `Target competitive replacement of legacy competitor systems with Mobileum AI Steering and Active Testing.`}
                         </div>
 
-                        {/* 3 Sub-Tiles: Competitors to Replace (small), Product Gaps Proposed Solution, Managed Services */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                          {/* Sub-tile 1: Competitors to Replace (Header in BLACK, small compact list) */}
-                          <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              Competitors to Replace
-                              {renderEditedBadge('replaceableCompetitors', accountData.productSection)}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {(accountData.productSection?.replaceableCompetitors || []).map((item, idx) => {
-                                const raw = typeof item === 'object' ? (item.name || item.text || '') : String(item || '');
-                                const shortName = raw.includes('—') ? raw.split('—')[0].trim() : raw.includes('-') ? raw.split('-')[0].trim() : raw.split(' ')[0].trim();
-                                return (
-                                  <div key={idx} style={{ background: 'rgba(239, 68, 68, 0.08)', color: 'var(--red)', border: '1px solid rgba(239, 68, 68, 0.18)', borderRadius: '4px', padding: '3px 6px', fontSize: '9.5px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '10px', color: 'var(--red)' }}>•</span> {shortName}
+                        {/* 3 Sub-Tiles: Dynamically proportioned based on counts */}
+                        {(() => {
+                          const repComps = accountData.productSection?.replaceableCompetitors || [];
+                          const productGaps = accountData.productSection?.productGaps || [];
+                          const managedServ = accountData.productSection?.managedServicesPossibility || [];
+
+                          const sc1 = repComps.length;
+                          const sc2 = productGaps.length;
+                          const sc3 = managedServ.length;
+
+                          // Dynamic weighting formula
+                          const sw1 = Math.max(0.7, 0.7 + Math.sqrt(sc1) * 0.85);
+                          const sw2 = Math.max(0.7, 0.7 + Math.sqrt(sc2) * 0.75);
+                          const sw3 = Math.max(0.7, 0.7 + Math.sqrt(sc3) * 0.75);
+                          const sTotal = sw1 + sw2 + sw3;
+                          const sFr1 = Math.max(0.65, (sw1 / sTotal) * 3).toFixed(2);
+                          const sFr2 = Math.max(0.65, (sw2 / sTotal) * 3).toFixed(2);
+                          const sFr3 = Math.max(0.65, (sw3 / sTotal) * 3).toFixed(2);
+
+                          return (
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: `minmax(180px, ${sFr1}fr) minmax(150px, ${sFr2}fr) minmax(150px, ${sFr3}fr)`,
+                              gap: '10px',
+                              alignItems: 'stretch'
+                            }}>
+                              {/* Sub-tile 1: Competitors to Replace */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Competitors to Replace</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--red)', background: 'rgba(239, 68, 68, 0.1)', padding: '1px 5px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {sc1}
+                                  </span>
+                                  {renderEditedBadge('replaceableCompetitors', accountData.productSection)}
+                                </div>
+                                {sc1 > 0 ? (
+                                  <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: sc1 > 5 ? 'repeat(auto-fill, minmax(85px, 1fr))' : '1fr',
+                                    gap: '4px'
+                                  }}>
+                                    {repComps.map((item, idx) => {
+                                      const raw = typeof item === 'object' ? (item.name || item.text || '') : String(item || '');
+                                      const shortName = raw.includes('—') ? raw.split('—')[0].trim() : raw.includes('-') ? raw.split('-')[0].trim() : raw.split(' ')[0].trim();
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            background: 'rgba(239, 68, 68, 0.08)',
+                                            color: 'var(--red)',
+                                            border: '1px solid rgba(239, 68, 68, 0.18)',
+                                            borderRadius: '4px',
+                                            padding: '3px 6px',
+                                            fontSize: '9.5px',
+                                            fontWeight: '600',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                          }}
+                                          title={raw}
+                                        >
+                                          <span style={{ fontSize: '10px', color: 'var(--red)', flexShrink: 0 }}>•</span>
+                                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName}</span>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                                    None identified
+                                  </div>
+                                )}
+                              </div>
 
-                          {/* Sub-tile 2: Product Gaps Proposed Solution */}
-                          <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              Product Gaps Proposed Solution
-                              {renderEditedBadge('productGaps', accountData.productSection)}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {(accountData.productSection?.productGaps || []).map((item, idx) => (
-                                <div key={idx} style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <span style={{ color: 'var(--red)', fontWeight: 'bold' }}>•</span> {item}
+                              {/* Sub-tile 2: Product Gaps Proposed Solution */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Product Gaps Proposed Solution</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', background: 'rgba(100, 116, 139, 0.12)', padding: '1px 5px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {sc2}
+                                  </span>
+                                  {renderEditedBadge('productGaps', accountData.productSection)}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
+                                {sc2 > 0 ? (
+                                  <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: sc2 > 5 ? 'repeat(auto-fill, minmax(130px, 1fr))' : '1fr',
+                                    gap: '5px'
+                                  }}>
+                                    {productGaps.map((item, idx) => (
+                                      <div key={idx} style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ color: 'var(--red)', fontWeight: 'bold' }}>•</span> {item}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                                    None identified
+                                  </div>
+                                )}
+                              </div>
 
-                          {/* Sub-tile 3: Managed Services */}
-                          <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px' }}>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              Managed Services
-                              {renderEditedBadge('managedServicesPossibility', accountData.productSection)}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {(accountData.productSection?.managedServicesPossibility || []).map((item, idx) => (
-                                <div key={idx} style={{ fontSize: '10px', color: 'var(--blue)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <span style={{ color: 'var(--blue)', fontWeight: 'bold' }}>•</span> {item}
+                              {/* Sub-tile 3: Managed Services */}
+                              <div style={{ background: 'var(--bg-card3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Managed Services</span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.1)', padding: '1px 5px', borderRadius: '10px', marginLeft: 'auto' }}>
+                                    {sc3}
+                                  </span>
+                                  {renderEditedBadge('managedServicesPossibility', accountData.productSection)}
                                 </div>
-                              ))}
+                                {sc3 > 0 ? (
+                                  <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: sc3 > 5 ? 'repeat(auto-fill, minmax(130px, 1fr))' : '1fr',
+                                    gap: '5px'
+                                  }}>
+                                    {managedServ.map((item, idx) => (
+                                      <div key={idx} style={{ fontSize: '10px', color: 'var(--blue)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ color: 'var(--blue)', fontWeight: 'bold' }}>•</span> {item}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                                    None identified
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </div>
+                          );
+                        })()}
                       </div>
 
                       {/* 3. STRATEGY PLACEMENT & FIX FORM BUTTON (Placed after Strategic Sales Angle!) */}
@@ -1724,7 +1853,60 @@ export default function DynamicCenterDashboard({
                     <div id="health-section" className="section" style={{ scrollMarginTop: '90px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', margin: '0 0 10px 0', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
                       <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--red)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Health of Solution Section
+                        {accountData.healthSection?.customerHealth && (
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#059669', background: '#d1fae5', border: '1px solid #34d399', padding: '2px 7px', borderRadius: '20px', marginLeft: '8px' }}>✓ SOURCED DATA (Health)</span>
+                        )}
                       </div>
+
+                      {accountData.healthSection?.customerHealth && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                          <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Overall Health Score</div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '24px', fontWeight: '900', color: accountData.healthSection.customerHealth.summary.status === 'Green' ? '#059669' : accountData.healthSection.customerHealth.summary.status === 'Amber' ? '#D97706' : '#DC2626' }}>
+                                {Math.round(accountData.healthSection.customerHealth.summary.health || 0)}
+                              </span>
+                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 8px', borderRadius: '4px', background: accountData.healthSection.customerHealth.summary.status === 'Green' ? 'rgba(5, 150, 105, 0.15)' : accountData.healthSection.customerHealth.summary.status === 'Amber' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(220, 38, 38, 0.15)', color: accountData.healthSection.customerHealth.summary.status === 'Green' ? '#059669' : accountData.healthSection.customerHealth.summary.status === 'Amber' ? '#D97706' : '#DC2626' }}>
+                                {accountData.healthSection.customerHealth.summary.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Health Breakdown</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                                <span>Behavioral</span>
+                                <span style={{ fontWeight: '700', color: Math.round(accountData.healthSection.customerHealth.summary.behavioral || 0) >= 80 ? '#059669' : Math.round(accountData.healthSection.customerHealth.summary.behavioral || 0) >= 50 ? '#D97706' : '#DC2626' }}>
+                                  {Math.round(accountData.healthSection.customerHealth.summary.behavioral || 0)}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                                <span>Financial</span>
+                                <span style={{ fontWeight: '700', color: Math.round(accountData.healthSection.customerHealth.summary.financial || 0) >= 80 ? '#059669' : Math.round(accountData.healthSection.customerHealth.summary.financial || 0) >= 50 ? '#D97706' : '#DC2626' }}>
+                                  {Math.round(accountData.healthSection.customerHealth.summary.financial || 0)}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                                <span>Sentiment</span>
+                                <span style={{ fontWeight: '700', color: Math.round(accountData.healthSection.customerHealth.summary.sentiment || 0) >= 80 ? '#059669' : Math.round(accountData.healthSection.customerHealth.summary.sentiment || 0) >= 50 ? '#D97706' : '#DC2626' }}>
+                                  {Math.round(accountData.healthSection.customerHealth.summary.sentiment || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', gridColumn: '1 / -1' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Top Factors Impacting Score</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {(accountData.healthSection.customerHealth.reasons || []).map((r, i) => (
+                                <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>• {r}</div>
+                              ))}
+                              {(!accountData.healthSection.customerHealth.reasons || accountData.healthSection.customerHealth.reasons.length === 0) && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No major negative factors identified.</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                         <div>
@@ -1732,6 +1914,9 @@ export default function DynamicCenterDashboard({
                             1. Installed Product-wise Support Tickets
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {(!accountData.healthSection?.installedProductWiseSupportTicket || accountData.healthSection.installedProductWiseSupportTicket.length === 0) && (
+                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px' }}>No recent support tickets found.</div>
+                            )}
                             {(accountData.healthSection?.installedProductWiseSupportTicket || []).map((item, idx) => (
                               <div key={idx} style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1758,6 +1943,9 @@ export default function DynamicCenterDashboard({
                             2. Usage of Installed Products
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {(!accountData.healthSection?.usageOfInstalledProducts || accountData.healthSection.usageOfInstalledProducts.length === 0) && (
+                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px' }}>No product usage data found.</div>
+                            )}
                             {(accountData.healthSection?.usageOfInstalledProducts || []).map((item, idx) => (
                               <div key={idx} style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
                                 <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)' }}>{item.product}</div>

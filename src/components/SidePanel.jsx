@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import CountryFlag from './CountryFlag';
+import { fetchHealthData } from '../utils/healthApi';
 
 const CLUSTER_COLORS = {
   'Ultra-Premium Roaming Hub': '#9B59B6',
@@ -27,7 +28,12 @@ export default function SidePanel({
   theme
 }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [globalHealthData, setGlobalHealthData] = useState(null);
   const chartRefs = useRef({});
+
+  useEffect(() => {
+    fetchHealthData().then(data => setGlobalHealthData(data)).catch(e => console.error("SidePanel health fetch failed", e));
+  }, []);
 
   // Reset tab on country change
   useEffect(() => {
@@ -615,10 +621,15 @@ export default function SidePanel({
                     <th>Profitability</th>
                     <th>Outbound</th>
                     <th>Inbound</th>
+                    <th>Health</th>
                   </tr>
                 </thead>
                 <tbody>
                   {countryData.operators.map((op, idx) => {
+                    const logicalName = `${op.operator} ${countryData.country_name || selectedCountry}`;
+                    const healthObj = globalHealthData?.find(h => h.customer_name?.toLowerCase() === logicalName.toLowerCase() || h.customer_name?.toLowerCase() === op.operator.toLowerCase());
+                    const healthScore = healthObj ? Math.round(healthObj.health || 0) : null;
+                    
                     const cells = [
                       { val: op.sub_base_mln, fmt: v => v ? v + 'M' : '—', score: null },
                       { val: op.fiveG_pct, fmt: v => v !== null ? v + '%' : '—', score: op.fiveG_pct },
@@ -628,6 +639,7 @@ export default function SidePanel({
                       { val: op.profitability_score, fmt: () => op.profitability || '—', score: op.profitability_score * 20 },
                       { val: op.outbound_roaming_score, fmt: () => op.outbound_roaming || '—', score: op.outbound_roaming_score * 20 },
                       { val: op.inbound_roaming_score, fmt: () => op.inbound_roaming || '—', score: op.inbound_roaming_score * 20 },
+                      { val: healthScore, fmt: v => v !== null ? v : '—', score: healthScore, isHealth: true }
                     ];
 
                     return (
@@ -638,8 +650,15 @@ export default function SidePanel({
                         </td>
                         {cells.map((cell, cidx) => {
                           const sc = cell.score;
-                          const bg = sc === null ? '' : hmColor(sc);
-                          const textClr = sc !== null && sc < 35 ? '#fff' : sc > 65 ? '#0f172a' : 'inherit';
+                          let bg = sc === null ? '' : hmColor(sc);
+                          let textClr = sc !== null && sc < 35 ? '#fff' : sc > 65 ? '#0f172a' : 'inherit';
+                          
+                          if (cell.isHealth && sc !== null && sc !== undefined) {
+                            if (sc >= 80) { bg = '#10b981'; textClr = '#ffffff'; }
+                            else if (sc >= 60) { bg = '#f59e0b'; textClr = '#ffffff'; }
+                            else { bg = '#ef4444'; textClr = '#ffffff'; }
+                          }
+
                           return (
                             <td
                               key={cidx}

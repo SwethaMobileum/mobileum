@@ -14,6 +14,10 @@ export default async function handler(req, res) {
   const targetOperatorId = operatorId || 'Global';
   const targetUpdatedBy = updatedBy || 'Anonymous';
 
+  if (process.env.DATA_SOURCE !== 'postgres') {
+    return res.status(200).json({ success: true, mock: true });
+  }
+
   try {
     // 1. Fetch current override to use as old_value
     const existingResult = await query(

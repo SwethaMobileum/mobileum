@@ -45,7 +45,7 @@ export default function DashboardHeader({
                 background: 'var(--bg-card2)',
                 border: '1px solid var(--border)',
                 borderRadius: '6px',
-                padding: isScrolled ? '3px 8px' : '4px 10px',
+                padding: '4px 10px',
                 fontSize: '10px',
                 fontWeight: '600',
                 color: 'var(--text-primary)',
@@ -69,7 +69,7 @@ export default function DashboardHeader({
                 background: 'var(--bg-card2)',
                 border: '1px solid var(--border)',
                 borderRadius: '6px',
-                padding: isScrolled ? '3px 8px' : '4px 10px',
+                padding: '4px 10px',
                 fontSize: '10px',
                 fontWeight: '600',
                 color: 'var(--text-primary)',
@@ -132,19 +132,18 @@ export default function DashboardHeader({
           id="panel-title"
           className="panel-title-text"
           style={{
-            fontSize: isScrolled ? '16px' : '22px',
+            fontSize: '20px',
             fontWeight: '800',
             color: 'var(--text-primary)',
             marginTop: '4px',
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            transition: 'all 0.2s ease'
+            gap: '10px'
           }}
         >
           {selectedCountry && countryData?.iso && (
-            <CountryFlag iso={countryData.iso} country={selectedCountry} size={isScrolled ? 'medium' : 'large'} />
+            <CountryFlag iso={countryData.iso} country={selectedCountry} size="large" />
           )}
           {selectedOperator ? (
             <>{selectedOperator} Operator Details</>
@@ -155,26 +154,24 @@ export default function DashboardHeader({
           )}
         </div>
 
-        {/* 3. ROW 3 — Subtitle */}
-        {!isScrolled && (
-          <div
-            id="panel-subtitle"
-            className="panel-subtitle-text"
-            style={{
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              marginTop: '4px',
-              textAlign: 'left'
-            }}
-          >
-            {selectedOperator
-              ? `Active operator profile, performance benchmarks, and financial analytics for ${selectedOperator}.`
-              : selectedCountry
-                ? 'Active intelligence, operator benchmarks, support service levels, and competitor analytics.'
-                : 'Aggregated regional telecom statistics, operator distributions, and market benchmarks.'
-            }
-          </div>
-        )}
+        {/* 3. ROW 3 — Subtitle (Permanently visible to prevent layout shift) */}
+        <div
+          id="panel-subtitle"
+          className="panel-subtitle-text"
+          style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            marginTop: '4px',
+            textAlign: 'left'
+          }}
+        >
+          {selectedOperator
+            ? `Active operator profile, performance benchmarks, and financial analytics for ${selectedOperator}.`
+            : selectedCountry
+              ? 'Active intelligence, operator benchmarks, support service levels, and competitor analytics.'
+              : 'Aggregated regional telecom statistics, operator distributions, and market benchmarks.'
+          }
+        </div>
 
         {/* Top-Right Action Controls (Clear Filter & Export Report / Export PPT) */}
         <div style={{ position: 'absolute', right: 0, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
@@ -219,7 +216,7 @@ export default function DashboardHeader({
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
-                  padding: isScrolled ? '4px 10px' : '6px 12px',
+                  padding: '5px 12px',
                   fontSize: '10px',
                   fontWeight: '600',
                   cursor: 'pointer',
@@ -245,7 +242,7 @@ export default function DashboardHeader({
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
-                  padding: isScrolled ? '4px 10px' : '6px 12px',
+                  padding: '5px 12px',
                   fontSize: '10px',
                   fontWeight: '600',
                   cursor: 'pointer',

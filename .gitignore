@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env.local
+data-source/
+data-cache/
+*.xlsx
+*.csv
+__pycache__/
+*.pyc
+scratch/

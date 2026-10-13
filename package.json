@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "load:data": "python scripts/load_excel.py --to json",
+    "check:data": "python scripts/check_data.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

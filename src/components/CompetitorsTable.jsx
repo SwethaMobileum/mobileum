@@ -1,4 +1,5 @@
 import React from 'react';
+import { SampleDataBadge } from '../utils/dataProvenance';
 
 export default function CompetitorsTable({ competitorData }) {
   if (!competitorData || competitorData.length === 0) return null;

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { fetchHealthData } from '../utils/healthApi';
 
 const CLUSTER_COLORS = {
   'Frontier': '#E74C3C',
@@ -23,6 +24,11 @@ export default function MapComponent({
   onSelectCountry,
   theme
 }) {
+  const [globalHealthData, setGlobalHealthData] = useState(null);
+
+  useEffect(() => {
+    fetchHealthData().then(data => setGlobalHealthData(data)).catch(err => console.error("Failed to load health data for map:", err));
+  }, []);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geojsonLayerRef = useRef(null);
@@ -59,6 +65,31 @@ export default function MapComponent({
   const getCountryColor = (countryName, lens) => {
     const v = countries[countryName];
     if (!v) return theme === 'light' ? '#cbd5e1' : '#1e2d4a';
+    
+    if (lens === 'health' && globalHealthData) {
+      const normC = (c) => {
+        if (!c) return '';
+        const s = c.trim().toLowerCase();
+        if (s === 'uae' || s.includes('united arab emirates')) return 'uae';
+        if (s === 'usa' || s === 'united states' || s === 'united states of america') return 'usa';
+        if (s === 'uk' || s === 'united kingdom') return 'uk';
+        if (s === 'ivory coast' || s === "cote d'ivoire") return "cote d'ivoire";
+        if (s === 'congo' || s === 'dr congo') return 'dr congo';
+        return s;
+      };
+      const targetNorm = normC(countryName);
+
+      // Find all operators in this country and average their health
+      const countryHealths = globalHealthData.filter(h => h.country && normC(h.country) === targetNorm && h.health != null);
+      if (countryHealths.length > 0) {
+        const avgHealth = countryHealths.reduce((sum, h) => sum + parseFloat(h.health), 0) / countryHealths.length;
+        // Re-use heatmap logic or green-to-red based on score
+        if (avgHealth >= 80) return '#059669'; // Green
+        if (avgHealth >= 60) return '#D97706'; // Amber
+        return '#DC2626'; // Red
+      }
+      return theme === 'light' ? '#cbd5e1' : '#1e2d4a'; // no health data
+    }
     switch (lens) {
       case 'cluster':
         return CLUSTER_COLORS[v.cluster_name] || '#4A90D9';
@@ -174,11 +205,15 @@ export default function MapComponent({
 
     mapInstanceRef.current = map;
 
-    // Load CartoDB Positron (completely NO labels, only geography)
-    const tileUrl = 'https://{s}.basemaps.cartocdn.com/positron_nolabels/{z}/{x}/{y}{r}.png';
+    // Base tile layer (clean, no labels)
+    const tileUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+    
     const tileLayer = L.tileLayer(tileUrl, {
+      subdomains: 'abcd',
       maxZoom: 19,
-      attribution: '&copy; CartoDB &copy; OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -187,8 +222,16 @@ export default function MapComponent({
     map.getPane('labels').style.zIndex = 450;
     map.getPane('labels').style.pointerEvents = 'none';
 
-    // No raster label layer - all labels are custom HTML from GeoJSON
-    const labelsLayer = null;
+    // Clean vector-rendered cartographic labels layer that dynamically adjusts with zoom
+    const labelsUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+
+    const labelsLayer = L.tileLayer(labelsUrl, {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'labels'
+    }).addTo(map);
 
     labelsLayerRef.current = labelsLayer;
 
@@ -226,50 +269,10 @@ export default function MapComponent({
                 if (v) onSelectCountry(name);
               }
             });
-
-            // Add country name label - clean custom HTML label from GeoJSON
-            if (name) {
-              const bounds = layer.getBounds();
-              const center = bounds.getCenter();
-              const countryLabel = L.marker(center, {
-                icon: L.divIcon({
-                  className: 'country-label',
-                  html: `<span>${name}</span>`,
-                  iconSize: [100, 20],
-                  iconAnchor: [50, 10],
-                  pointerEvents: 'none'
-                }),
-                pane: 'labels'
-              }).addTo(map);
-            }
           }
         }).addTo(map);
 
         geojsonLayerRef.current = layer;
-
-        // Add static continent labels
-        const continents = [
-          { name: 'Europe', coords: [50.0, 15.0] },
-          { name: 'Asia', coords: [45.0, 80.0] },
-          { name: 'Africa', coords: [10.0, 20.0] },
-          { name: 'North America', coords: [45.0, -100.0] },
-          { name: 'South America', coords: [-15.0, -60.0] },
-          { name: 'Oceania', coords: [-25.0, 135.0] }
-        ];
-
-        continents.forEach(c => {
-          const icon = L.divIcon({
-            className: 'continent-label',
-            html: `<span style="font-weight: 800; font-size: 13px; color: #ffffff; text-shadow: 0px 1px 3px rgba(0,0,0,0.95), 0px 0px 6px rgba(0,0,0,0.8); letter-spacing: 0.5px; text-transform: uppercase;">${c.name}</span>`,
-            iconSize: [120, 24],
-            iconAnchor: [60, 12]
-          });
-          L.marker(c.coords, {
-            icon,
-            interactive: false,
-            pane: 'labels'
-          }).addTo(map);
-        });
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -315,20 +318,29 @@ export default function MapComponent({
       mapInstanceRef.current.removeLayer(labelsLayerRef.current);
     }
 
-    // Use CartoDB Positron (completely NO labels - only geography outlines)
-    const tileUrl = 'https://{s}.basemaps.cartocdn.com/positron_nolabels/{z}/{x}/{y}{r}.png';
+    const tileUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+    
     const tileLayer = L.tileLayer(tileUrl, {
+      subdomains: 'abcd',
       maxZoom: 19,
-      attribution: '&copy; CartoDB &copy; OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
     }).addTo(mapInstanceRef.current);
 
     tileLayerRef.current = tileLayer;
 
-    // No raster label layer - all labels are custom HTML
-    if (labelsLayerRef.current) {
-      mapInstanceRef.current.removeLayer(labelsLayerRef.current);
-    }
-    labelsLayerRef.current = null;
+    const labelsUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+
+    const labelsLayer = L.tileLayer(labelsUrl, {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'labels'
+    }).addTo(mapInstanceRef.current);
+
+    labelsLayerRef.current = labelsLayer;
 
     // Refresh geojson styles
     if (geojsonLayerRef.current) {

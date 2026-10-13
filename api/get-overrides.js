@@ -11,6 +11,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing countryId' });
   }
 
+  if (process.env.DATA_SOURCE !== 'postgres') {
+    return res.status(200).json({});
+  }
+
   try {
     const result = await query(
       `SELECT section, field_name, value 
