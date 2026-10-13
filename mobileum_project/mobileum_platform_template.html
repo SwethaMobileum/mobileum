@@ -1,0 +1,2851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobileum — Global Telecom Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-deep:#060b18;--bg-card:#0d1628;--bg-card2:#111e35;--bg-card3:#162040;
+  --border:#1e3054;--border2:#243760;
+  --blue:#2563eb;--blue-light:#3b82f6;--blue-glow:#1d4ed8;
+  --teal:#06b6d4;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--orange:#f97316;
+  --text-primary:#f0f4ff;--text-secondary:#8ba3c7;--text-muted:#4a6080;
+  --sidebar-w:520px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg-deep);color:var(--text-primary)}
+#app{display:flex;height:100vh;width:100vw}
+
+/* ── TOP BAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;height:52px;z-index:1000;
+  background:rgba(6,11,24,0.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:16px
+}
+#topbar .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-.3px;color:#fff;white-space:nowrap}
+#topbar .logo-dot{width:8px;height:8px;background:var(--blue-light);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+#topbar .subtitle{font-size:11px;color:var(--text-muted);font-weight:400;display:none}
+@media(min-width:900px){#topbar .subtitle{display:block}}
+.spacer{flex:1}
+#topbar .stats-bar{display:flex;gap:20px}
+.stat-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)}
+.stat-pill span{color:var(--blue-light);font-weight:600}
+#search-box{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;font-size:12px;color:var(--text-primary);width:200px;outline:none;
+  font-family:inherit
+}
+#search-box::placeholder{color:var(--text-muted)}
+#search-box:focus{border-color:var(--blue)}
+#search-results{
+  position:absolute;top:50px;right:0;width:220px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:8px;z-index:2000;
+  max-height:300px;overflow-y:auto;display:none
+}
+.search-item{padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)}
+.search-item:hover{background:var(--bg-card2);color:var(--blue-light)}
+
+/* ── FILTER BAR ── */
+#filterbar{
+  position:fixed;top:52px;left:0;right:0;height:44px;z-index:999;
+  background:rgba(13,22,40,0.97);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:10px;overflow-x:auto
+}
+.filter-btn{
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+  white-space:nowrap;transition:all .2s;font-family:inherit
+}
+.filter-btn:hover,.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.filter-sep{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0}
+.lens-label{font-size:10px;color:var(--text-muted);white-space:nowrap;font-weight:500}
+
+/* ── MAP ── */
+#map-container{flex:1;margin-top:96px;position:relative;overflow:hidden}
+#map{height:100%;width:100%}
+.leaflet-container{background:#060b18!important}
+.custom-tooltip{
+  background:rgba(6,11,24,0.95)!important;border:1px solid var(--border)!important;
+  color:var(--text-primary)!important;font-family:'Inter',sans-serif!important;
+  font-size:12px!important;padding:8px 12px!important;border-radius:8px!important;
+  box-shadow:0 4px 20px rgba(0,0,0,.5)!important
+}
+
+/* ── LEGEND ── */
+#legend{
+  position:absolute;bottom:24px;left:16px;z-index:900;
+  background:rgba(13,22,40,0.92);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-width:180px
+}
+#legend h4{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.legend-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px;color:var(--text-secondary)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── MAP INFO BOX ── */
+#map-hover-box{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:900;
+  background:rgba(13,22,40,0.92);border:1px solid var(--border);border-radius:10px;
+  padding:8px 16px;font-size:12px;color:var(--text-secondary);pointer-events:none;
+  display:none
+}
+
+/* ── SIDE PANEL ── */
+#panel{
+  width:0;min-height:0;margin-top:96px;
+  background:var(--bg-card);border-left:1px solid var(--border);
+  overflow:hidden;transition:width .35s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;position:relative
+}
+#panel.open{width:var(--sidebar-w)}
+#panel-inner{
+  width:var(--sidebar-w);height:100%;overflow-y:auto;
+  scrollbar-width:auto;scrollbar-color:var(--border) var(--bg-card)
+}
+#panel-inner::-webkit-scrollbar{width:12px}
+#panel-inner::-webkit-scrollbar-track{background:var(--bg-card)}
+#panel-inner::-webkit-scrollbar-thumb{background:var(--border);border:3px solid var(--bg-card);border-radius:6px}
+#panel-inner::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ── PANEL HEADER ── */
+#panel-header{
+  padding:16px 20px 12px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--bg-card);z-index:10
+}
+#panel-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+#panel-subtitle{font-size:11px;color:var(--text-muted);margin-top:3px}
+#close-panel{
+  position:absolute;top:16px;right:16px;background:var(--bg-card2);border:1px solid var(--border);
+  border-radius:6px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:14px;color:var(--text-secondary);transition:all .2s
+}
+#close-panel:hover{background:var(--bg-card3);color:var(--text-primary)}
+
+/* ── PANEL TABS ── */
+#panel-tabs{
+  display:flex;border-bottom:1px solid var(--border);padding:0 20px;
+  position:sticky;top:62px;background:var(--bg-card);z-index:9;overflow-x:auto
+}
+.tab-btn{
+  padding:10px 14px;font-size:11px;font-weight:600;cursor:pointer;border:none;
+  background:transparent;color:var(--text-muted);border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .2s;font-family:inherit;letter-spacing:.3px
+}
+.tab-btn.active{color:var(--blue-light);border-bottom-color:var(--blue-light)}
+.tab-btn:hover{color:var(--text-secondary)}
+
+/* ── TAB CONTENT ── */
+.tab-content{display:none;padding:16px 20px}
+.tab-content.active{display:block}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.kpi-card{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;position:relative;overflow:hidden
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:10px 10px 0 0
+}
+.kpi-card.blue::before{background:var(--blue-light)}
+.kpi-card.teal::before{background:var(--teal)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.yellow::before{background:var(--yellow)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.purple::before{background:var(--purple)}
+.kpi-label{font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px}
+.kpi-value{font-size:20px;font-weight:700;color:var(--text-primary);margin:4px 0 2px;line-height:1}
+.kpi-sub{font-size:10px;color:var(--text-secondary)}
+.kpi-badge{
+  display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:600;
+  padding:2px 6px;border-radius:4px;margin-top:4px
+}
+.badge-up{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-down{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-neutral{background:rgba(139,163,199,.1);color:var(--text-secondary)}
+
+/* ── SECTION ── */
+.section{margin-bottom:20px}
+.section-title{
+  font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── CHART CONTAINERS ── */
+.chart-wrap{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-bottom:12px;position:relative
+}
+.chart-title{font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.chart-canvas-wrap{position:relative}
+
+/* ── OPERATOR TABLE ── */
+.op-table{width:100%;border-collapse:collapse;font-size:11px}
+.op-table th{
+  font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left
+}
+.op-table td{padding:8px 8px;border-bottom:1px solid rgba(30,48,84,.5);vertical-align:middle}
+.op-table tr:last-child td{border-bottom:none}
+.op-table tr:hover td{background:rgba(255,255,255,.02)}
+.op-name{font-weight:600;color:var(--text-primary)}
+.op-sub{font-size:9px;color:var(--text-muted);margin-top:1px}
+.health-bar{height:4px;background:var(--border);border-radius:4px;width:60px;overflow:hidden}
+.health-fill{height:100%;border-radius:4px;transition:width .6s}
+
+/* ── SCORE BADGE ── */
+.score-circle{
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;border:2px solid;flex-shrink:0
+}
+
+/* ── PRODUCT CARDS ── */
+.product-card{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .2s
+}
+.product-card:hover{border-color:var(--blue);background:var(--bg-card3)}
+.product-card.top{border-color:var(--yellow);background:rgba(245,158,11,.05)}
+.product-top-badge{
+  display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,.2);
+  color:var(--yellow);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:6px
+}
+.product-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.product-cat{font-size:10px;color:var(--text-muted);margin:2px 0}
+.product-kpi{font-size:10px;color:var(--green);margin-top:4px}
+.product-reason{font-size:10px;color:var(--text-secondary);margin-top:4px;line-height:1.5}
+.score-bar-wrap{display:flex;align-items:center;gap:8px;margin-top:6px}
+.score-bar-bg{flex:1;height:3px;background:var(--border);border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .8s}
+.score-num{font-size:10px;font-weight:600;color:var(--text-secondary);white-space:nowrap}
+
+/* ── PERCENTILE GAUGES ── */
+.percentile-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.perc-label{font-size:10px;color:var(--text-secondary);width:120px;flex-shrink:0}
+.perc-bar{flex:1;height:6px;background:var(--border);border-radius:6px;overflow:hidden;position:relative}
+.perc-fill{height:100%;border-radius:6px}
+.perc-value{font-size:10px;font-weight:600;color:var(--text-primary);width:32px;text-align:right}
+.perc-rank{font-size:9px;color:var(--text-muted);width:28px;text-align:right}
+
+/* ── WATERFALL ── */
+.wf-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.wf-label{font-size:10px;color:var(--text-secondary);width:140px;flex-shrink:0}
+.wf-bar-area{flex:1;position:relative;height:16px}
+.wf-bar{height:12px;border-radius:3px;position:absolute;top:2px;display:flex;align-items:center;padding:0 4px}
+.wf-val{font-size:10px;font-weight:600;white-space:nowrap}
+
+/* ── SEASONAL CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.cal-month{
+  text-align:center;padding:6px 2px;border-radius:5px;font-size:8px;
+  font-weight:500;cursor:default;transition:all .2s
+}
+.cal-label{font-size:8px;color:var(--text-muted);text-align:center;margin-top:3px}
+
+/* ── ANOMALY BOX ── */
+.anomaly-box{
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+  border-radius:8px;padding:10px 12px;font-size:11px;color:var(--yellow);margin-bottom:12px;
+  display:flex;gap:8px;align-items:flex-start
+}
+.anomaly-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+
+/* ── NARRATIVE ── */
+.narrative-block{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-bottom:10px
+}
+.narrative-block h4{font-size:11px;font-weight:700;color:var(--blue-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.narrative-block p{font-size:11px;color:var(--text-secondary);line-height:1.7}
+.narrative-block strong{color:var(--text-primary);font-weight:600}
+
+/* ── HEATMAP ── */
+.heatmap-wrap{overflow-x:auto}
+.heatmap-table{border-collapse:collapse;font-size:9px;min-width:460px}
+.heatmap-table th{padding:4px 6px;color:var(--text-muted);font-weight:500;text-align:center;border:1px solid var(--border);white-space:nowrap}
+.heatmap-table td{padding:4px 6px;text-align:center;border:1px solid var(--border);white-space:nowrap;cursor:default}
+.hm-op-name{text-align:left!important;font-weight:600;color:var(--text-primary);padding:4px 8px!important}
+
+/* ── COMPARISON ── */
+#compare-bar{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(13,22,40,0.97);border:1px solid var(--border);border-radius:12px;
+  padding:10px 16px;display:none;gap:12px;align-items:center;
+  backdrop-filter:blur(12px);font-size:12px
+}
+#compare-bar.visible{display:flex}
+.compare-pill{
+  background:var(--bg-card3);border:1px solid var(--border);border-radius:20px;
+  padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px
+}
+.compare-remove{cursor:pointer;color:var(--text-muted);font-size:12px}
+.compare-remove:hover{color:var(--red)}
+#compare-go{
+  background:var(--blue);color:#fff;border:none;border-radius:8px;
+  padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit
+}
+
+/* ── MODAL ── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)
+}
+#modal-overlay.open{display:flex}
+#modal{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:16px;
+  width:90vw;max-width:900px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column
+}
+#modal-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between
+}
+#modal-title{font-size:15px;font-weight:700}
+#modal-close{
+  background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;
+  width:28px;height:28px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--text-secondary);font-size:14px
+}
+#modal-body{padding:20px;overflow-y:auto;flex:1}
+
+/* ── EXPORT BTN ── */
+#export-btn{
+  position:fixed;bottom:20px;right:20px;z-index:999;
+  background:var(--blue);color:#fff;border:none;border-radius:10px;
+  padding:10px 16px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px rgba(37,99,235,.4);
+  transition:all .2s
+}
+#export-btn:hover{background:var(--blue-glow);transform:translateY(-1px)}
+
+/* ── LOADING SKELETON ── */
+.skeleton{
+  background:linear-gradient(90deg,var(--bg-card2) 25%,var(--bg-card3) 50%,var(--bg-card2) 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── CLUSTER TAG ── */
+.cluster-tag{
+  display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;
+  padding:2px 8px;border-radius:20px;margin-top:2px
+}
+
+/* ── DATA SOURCE TOOLTIP ── */
+[data-source]{position:relative;cursor:help}
+[data-source]::after{
+  content:attr(data-source);position:absolute;bottom:calc(100% + 4px);left:50%;
+  transform:translateX(-50%);background:rgba(0,0,0,.9);color:#aaa;
+  font-size:9px;padding:3px 8px;border-radius:4px;white-space:nowrap;
+  pointer-events:none;opacity:0;transition:opacity .2s;z-index:100
+}
+[data-source]:hover::after{opacity:1}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:var(--bg-card);border-radius:6px}
+::-webkit-scrollbar-thumb{background:var(--border);border:3px solid var(--bg-card);border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  :root{--sidebar-w:100vw}
+  #panel.open{width:100vw}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    MOBILEUM
+    <span class="subtitle">GLOBAL TELECOM INTELLIGENCE PLATFORM</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="stats-bar">
+    <div class="stat-pill">Countries <span id="stat-countries">137</span></div>
+    <div class="stat-pill">Operators <span id="stat-ops">529</span></div>
+    <div class="stat-pill">Regions <span id="stat-regions">5</span></div>
+  </div>
+  <div style="position:relative">
+    <input type="text" id="search-box" placeholder="Search country..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filterbar">
+  <span class="lens-label">MAP LENS:</span>
+  <button class="filter-btn active" data-lens="cluster" onclick="setLens(this,'cluster')">Market Cluster</button>
+  <button class="filter-btn" data-lens="fraud" onclick="setLens(this,'fraud')">Fraud Risk</button>
+  <button class="filter-btn" data-lens="fiveG" onclick="setLens(this,'fiveG')">5G Readiness</button>
+  <button class="filter-btn" data-lens="roaming" onclick="setLens(this,'roaming')">Roaming Intensity</button>
+  <button class="filter-btn" data-lens="arpu" onclick="setLens(this,'arpu')">ARPU Pressure</button>
+  <div class="filter-sep"></div>
+  <span class="lens-label">REGION:</span>
+  <button class="filter-btn" data-region="all" onclick="filterRegion(this,'all')">All</button>
+  <button class="filter-btn" data-region="MECA" onclick="filterRegion(this,'MECA')">MECA</button>
+  <button class="filter-btn" data-region="Europe" onclick="filterRegion(this,'Europe')">Europe</button>
+  <button class="filter-btn" data-region="APAC" onclick="filterRegion(this,'APAC')">APAC</button>
+  <button class="filter-btn" data-region="LATAM" onclick="filterRegion(this,'LATAM')">LATAM</button>
+  <button class="filter-btn" data-region="Africa" onclick="filterRegion(this,'Africa')">Africa</button>
+  <div class="filter-sep"></div>
+  <button class="filter-btn" onclick="openCompareModal()">⊕ Compare Countries</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- MAP -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-hover-box">Click any country to open detailed analysis</div>
+    <div id="legend">
+      <h4 id="legend-title">Market Cluster</h4>
+      <div id="legend-items"></div>
+    </div>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div id="panel">
+    <div id="panel-inner">
+      <div id="panel-header">
+        <div id="panel-title">—</div>
+        <div id="panel-subtitle">—</div>
+        <button id="close-panel" onclick="closePanel()">✕</button>
+      </div>
+      <div id="panel-tabs">
+        <button class="tab-btn" onclick="showTab('operators')">Operator Details</button>
+        <button class="tab-btn active" onclick="showTab('overview')">Market Overview</button>
+        <button class="tab-btn" onclick="showTab('account')">Account Section</button>
+        <button class="tab-btn" onclick="showTab('stats')">Stats Profile</button>
+        <button class="tab-btn" onclick="showTab('narrative')">Narrative Report</button>
+      </div>
+
+      <!-- TAB: OVERVIEW -->
+      <div id="tab-overview" class="tab-content active">
+        <div id="overview-content"></div>
+      </div>
+
+      <!-- TAB: OPERATORS -->
+      <div id="tab-operators" class="tab-content">
+        <div id="operators-content"></div>
+      </div>
+
+      <!-- TAB: ACCOUNT SECTION -->
+      <div id="tab-account" class="tab-content">
+        <div id="account-content" style="display:flex;flex-direction:column;gap:20px;padding:12px 0"></div>
+      </div>
+
+      <!-- TAB: STATISTICS -->
+      <div id="tab-stats" class="tab-content">
+        <div id="stats-content"></div>
+      </div>
+
+      <!-- TAB: INTELLIGENCE NARRATIVE -->
+      <div id="tab-narrative" class="tab-content">
+        <div id="narrative-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARE BAR -->
+<div id="compare-bar">
+  <span style="font-size:11px;color:var(--text-muted);font-weight:600">COMPARING:</span>
+  <div id="compare-pills"></div>
+  <button id="compare-go" onclick="runComparison()">Compare Now →</button>
+  <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" onclick="clearCompare()">✕</button>
+</div>
+
+<!-- EXPORT BTNS -->
+<div style="position: fixed; bottom: 20px; right: 60px; z-index: 999; display: flex; gap: 8px;">
+  <button id="export-btn" onclick="exportReport()">
+    ↓ Export Report
+  </button>
+  <button id="export-ppt-btn" onclick="exportPPT()" style="background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 20px rgba(37,99,235,0.25); transition: all .2s;">
+    ↓ Export as PPT
+  </button>
+</div>
+
+<!-- COMPARISON MODAL -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal">
+    <div id="modal-header">
+      <div id="modal-title">Country Comparison</div>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// EMBED DATA
+// ═══════════════════════════════════════════════════════════════════
+const TELECOM_DATA = /*DATA_PLACEHOLDER*/
+
+// Dynamic tickets, AMC, and insights calculated on the fly from Telecom Data.
+
+
+
+const MOCK_COMPETITORS = [
+  { "name": "Syniverse", "category": "Direct Competitor", "key_offerings": "Data/Financial Clearing, IPX Transport connectivity, and basic Roaming Steering.", "versus_mobileum": "Mobileum dominates in advanced analytics (Active Testing, Roaming DNA), whereas Syniverse is infrastructure-heavy." },
+  { "name": "Tomia", "category": "Direct Competitor", "key_offerings": "Clearing and Settlement, Roaming Steering, and Interconnect Optimization.", "versus_mobileum": "Mobileum features advanced signaling firewall security and eSIM, while Tomia focuses on wholesale margins." },
+  { "name": "Subex", "category": "Direct Competitor", "key_offerings": "Business & Revenue Assurance, IoT security, and telecom Fraud Management.", "versus_mobileum": "Mobileum RAID 9 platform is highly modern with SaaS capabilities, whereas Subex has legacy deployments." },
+  { "name": "BICS", "category": "Partner / Niche", "key_offerings": "International voice/SMS carrier routing, roaming hubs, and network quality testing.", "versus_mobileum": "Mobileum is a software vendor partner; we compete only on roaming active testing lines." }
+];
+
+window.productStates = window.productStates || {};
+
+function getProductState(countryName, productName, accountData) {
+  const key = `${countryName}_${productName}`;
+  if (window.productStates[key]) {
+    return window.productStates[key];
+  }
+  const usedProducts = accountData?.productSection?.mobileumProducts || [];
+  const isUsed = usedProducts.includes(productName);
+  const state = {
+    used: isUsed,
+    channel: 'Licensed'
+  };
+  window.productStates[key] = state;
+  return state;
+}
+
+function setProductUsed(countryName, productName, checked) {
+  const key = `${countryName}_${productName}`;
+  if (!window.productStates[key]) {
+    window.productStates[key] = { used: checked, channel: 'Licensed' };
+  } else {
+    window.productStates[key].used = checked;
+  }
+}
+
+function setProductChannel(countryName, productName, channel) {
+  const key = `${countryName}_${productName}`;
+  if (!window.productStates[key]) {
+    window.productStates[key] = { used: false, channel: channel };
+  } else {
+    window.productStates[key].channel = channel;
+  }
+}
+
+function parsePipelineValue(valStr) {
+  if (!valStr) return 0;
+  const match = valStr.match(/\$?([0-9.]+)\s*M/i);
+  if (match) {
+    return parseFloat(match[1]);
+  }
+  const cleanNum = parseFloat(valStr.replace(/[^0-9.]/g, ''));
+  return isNaN(cleanNum) ? 0 : cleanNum;
+}
+
+function getProductValue(index, totalValStr, numProducts) {
+  const totalVal = parsePipelineValue(totalValStr);
+  if (totalVal <= 0) return '$0.0M';
+  if (numProducts <= 1) return `$${totalVal.toFixed(1)}M`;
+  
+  const sumWeights = (numProducts * (numProducts + 1)) / 2;
+  const productWeight = (numProducts - index) / sumWeights;
+  const productVal = totalVal * productWeight;
+  return `$${productVal.toFixed(1)}M`;
+}
+
+
+
+
+// ═══════════════════════════════════════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════════════════════════════════════
+const C = TELECOM_DATA.countries;
+const META = TELECOM_DATA.metadata;
+let map, geojsonLayer, currentCountry = null, currentLens = 'cluster';
+let activeRegion = 'all', compareList = [], chartInstances = {};
+
+// ═══════════════════════════════════════════════════════════════════
+// COLOUR HELPERS
+// ═══════════════════════════════════════════════════════════════════
+const CLUSTER_COLORS = {
+  'Ultra-Premium Roaming Hub': '#9B59B6',
+  'Mature Mid-Tier': '#4A90D9',
+  'High Growth Corridor': '#F39C12',
+  'Emerging Mid-Tier': '#1ABC9C',
+  'Small Wealthy Market': '#2ECC71',
+  'Frontier Market': '#E74C3C',
+  'Regulatory Transition': '#7F8C8D',
+};
+
+function scoreToColor(score, palette) {
+  if (score === null || score === undefined) return '#1e3054';
+  const s = Math.max(0, Math.min(100, score));
+  if (palette === 'fraud') {
+    if (s < 20) return '#1ABC9C';
+    if (s < 40) return '#F39C12';
+    if (s < 60) return '#E67E22';
+    if (s < 80) return '#E74C3C';
+    return '#C0392B';
+  }
+  if (palette === 'heat') {
+    if (s < 20) return '#1e3054';
+    if (s < 40) return '#1A5276';
+    if (s < 60) return '#2471A3';
+    if (s < 80) return '#2980B9';
+    return '#1ABC9C';
+  }
+  if (palette === 'arpu') {
+    if (s < 25) return '#27AE60';
+    if (s < 50) return '#F39C12';
+    if (s < 75) return '#E67E22';
+    return '#E74C3C';
+  }
+  return '#4A90D9';
+}
+
+function getCountryColor(countryName, lens) {
+  const v = C[countryName];
+  if (!v) return '#1e3054';
+  switch(lens) {
+    case 'cluster': return CLUSTER_COLORS[v.cluster_name] || '#4A90D9';
+    case 'fraud': {
+      const s = (v.stats.fraud_score || 3);
+      const pct = ((s - 1) / 4) * 100;
+      return scoreToColor(pct, 'fraud');
+    }
+    case 'fiveG': {
+      const f = v.stats.avg_5g || 0;
+      return scoreToColor(f, 'heat');
+    }
+    case 'roaming': {
+      const r = ((v.stats.roaming_intensity || 3) - 1) / 4 * 100;
+      return scoreToColor(r, 'heat');
+    }
+    case 'arpu': {
+      // Higher arpu_pressure = more red
+      const ap = v.radar?.arpu_pressure || 3;
+      const pct = ((5 - ap) / 4) * 100;
+      return scoreToColor(pct, 'arpu');
+    }
+    default: return CLUSTER_COLORS[v.cluster_name] || '#4A90D9';
+  }
+}
+
+function getLegendItems(lens) {
+  if (lens === 'cluster') {
+    return Object.entries(CLUSTER_COLORS).map(([name, color]) => ({label: name, color}));
+  }
+  const scales = {
+    fraud: [{label:'Very Low',color:'#1ABC9C'},{label:'Low',color:'#F39C12'},{label:'Medium',color:'#E67E22'},{label:'High',color:'#E74C3C'},{label:'Critical',color:'#C0392B'}],
+    fiveG: [{label:'<20%',color:'#1e3054'},{label:'20-40%',color:'#1A5276'},{label:'40-60%',color:'#2471A3'},{label:'60-80%',color:'#2980B9'},{label:'>80%',color:'#1ABC9C'}],
+    roaming: [{label:'Minimal',color:'#1e3054'},{label:'Low',color:'#1A5276'},{label:'Moderate',color:'#2471A3'},{label:'High',color:'#2980B9'},{label:'Very High',color:'#1ABC9C'}],
+    arpu: [{label:'Growing',color:'#27AE60'},{label:'Stable',color:'#F39C12'},{label:'Pressure',color:'#E67E22'},{label:'Critical',color:'#E74C3C'}],
+  };
+  return scales[lens] || [];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════════════════════════════
+function initMap() {
+  map = L.map('map', {
+    center: [20, 10], zoom: 2.5,
+    zoomControl: true, attributionControl: false,
+    minZoom: 1.5, maxZoom: 8,
+    preferCanvas: true
+  });
+
+  // Dark tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(map);
+
+  map.createPane('labels');
+  map.getPane('labels').style.zIndex = 450;
+  map.getPane('labels').style.pointerEvents = 'none';
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19, pane: 'labels'
+  }).addTo(map);
+
+  // Load GeoJSON world
+  fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+    .then(r => r.json())
+    .then(geo => {
+      geojsonLayer = L.geoJSON(geo, {
+        style: feature => styleFeature(feature),
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+      updateLegend();
+      document.getElementById('map-hover-box').style.display = 'block';
+
+      // Add static continent labels
+      const continents = [
+        { name: 'Europe', coords: [50.0, 15.0] },
+        { name: 'Asia', coords: [45.0, 80.0] },
+        { name: 'Africa', coords: [10.0, 20.0] },
+        { name: 'North America', coords: [45.0, -100.0] },
+        { name: 'South America', coords: [-15.0, -60.0] },
+        { name: 'Oceania', coords: [-25.0, 135.0] }
+      ];
+
+      continents.forEach(c => {
+        const icon = L.divIcon({
+          className: 'continent-label',
+          html: `<span style="font-weight: 800; font-size: 13px; color: #ffffff; text-shadow: 0px 1px 3px rgba(0,0,0,0.95), 0px 0px 6px rgba(0,0,0,0.8); letter-spacing: 0.5px; text-transform: uppercase;">${c.name}</span>`,
+          iconSize: [120, 24],
+          iconAnchor: [60, 12]
+        });
+        L.marker(c.coords, {
+          icon,
+          interactive: false,
+          pane: 'labels'
+        }).addTo(map);
+      });
+    })
+    .catch(() => {
+      // Fallback: create circle markers from our data
+      createCircleMarkers();
+    });
+}
+
+function styleFeature(feature) {
+  const name = findCountryName(feature.properties);
+  const color = name ? getCountryColor(name, currentLens) : '#1e2d4a';
+  const hasData = !!name && !!C[name];
+  return {
+    fillColor: color,
+    fillOpacity: hasData ? 0.75 : 0.25,
+    color: hasData ? '#ffffff22' : '#1e3054',
+    weight: 0.5,
+    opacity: 1
+  };
+}
+
+function findCountryName(props) {
+  const candidates = [props.NAME, props.ADMIN, props.NAME_LONG, props.SOVEREIGNT];
+  for (const c of candidates) {
+    if (!c) continue;
+    // Direct match
+    if (C[c]) return c;
+    // Case-insensitive
+    const upper = c.toUpperCase();
+    if (C[upper]) return upper;
+    // Partial match
+    for (const key of Object.keys(C)) {
+      if (key.toUpperCase() === c.toUpperCase()) return key;
+    }
+  }
+  return null;
+}
+
+function onEachFeature(feature, layer) {
+  const name = findCountryName(feature.properties);
+  const v = name ? C[name] : null;
+
+  layer.on({
+    mouseover(e) {
+      const l = e.target;
+      if (C[name]) {
+        l.setStyle({fillOpacity: 0.95, weight: 1.5, color: '#ffffff44'});
+        l.bringToFront();
+      }
+      const label = name || feature.properties.NAME || '?';
+      let tip = `<strong>${label}</strong>`;
+      if (v) {
+        tip += `<br><span style="color:var(--text-muted)">${v.region}</span>`;
+        tip += `<br>Operators: ${v.num_operators} · Cluster: ${v.cluster_name}`;
+        if (v.stats?.avg_5g) tip += `<br>5G: ${v.stats.avg_5g?.toFixed(0)}%`;
+      }
+      l.bindTooltip(tip, {className:'custom-tooltip', sticky:true}).openTooltip();
+    },
+    mouseout(e) {
+      geojsonLayer.resetStyle(e.target);
+    },
+    click() {
+      if (v) openCountry(name);
+    }
+  });
+}
+
+function createCircleMarkers() {
+  // Fallback for GeoJSON load failure
+  Object.entries(C).forEach(([name, v]) => {
+    if (!v.lat || !v.lng) return;
+    const color = getCountryColor(name, currentLens);
+    const radius = Math.max(4, Math.min(12, (v.num_operators || 1) * 2));
+    const marker = L.circleMarker([v.lat, v.lng], {
+      radius, fillColor: color, fillOpacity: 0.8,
+      color: '#ffffff22', weight: 0.5
+    }).addTo(map);
+    marker.on('click', () => openCountry(name));
+    marker.bindTooltip(`<strong>${name}</strong><br>${v.region} · ${v.num_operators} operators`,
+      {className:'custom-tooltip'});
+  });
+}
+
+function setLens(btn, lens) {
+  document.querySelectorAll('[data-lens]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentLens = lens;
+  if (geojsonLayer) {
+    geojsonLayer.setStyle(f => styleFeature(f));
+  }
+  updateLegend();
+}
+
+function filterRegion(btn, region) {
+  document.querySelectorAll('[data-region]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeRegion = region;
+  if (!geojsonLayer) return;
+  if (region === 'all') {
+    geojsonLayer.setStyle(f => styleFeature(f));
+    map.setView([20, 10], 2.5);
+    return;
+  }
+  // Dim non-region countries
+  geojsonLayer.eachLayer(l => {
+    const name = findCountryName(l.feature?.properties || {});
+    const v = name ? C[name] : null;
+    if (!v) { l.setStyle({fillOpacity: 0.1}); return; }
+    if (v.region !== region && !v.region.startsWith(region)) {
+      l.setStyle({fillOpacity: 0.12, color: '#1e3054'});
+    } else {
+      const color = getCountryColor(name, currentLens);
+      l.setStyle({fillColor: color, fillOpacity: 0.85, color: '#ffffff22', weight: 0.5});
+    }
+  });
+  // Zoom to region
+  const regionBounds = {
+    'MECA': [[10,-10],[50,80]], 'Europe': [[35,-10],[72,40]],
+    'APAC': [[-45,60],[55,180]], 'LATAM': [[-60,-145],[75,-30]],
+    'Africa': [[-35,-20],[38,52]]
+  };
+  if (regionBounds[region]) map.fitBounds(regionBounds[region]);
+}
+
+function updateLegend() {
+  const items = getLegendItems(currentLens);
+  const titles = {cluster:'Market Cluster',fraud:'Fraud Risk',fiveG:'5G Readiness',roaming:'Roaming Intensity',arpu:'ARPU Pressure'};
+  document.getElementById('legend-title').textContent = titles[currentLens] || 'Legend';
+  const html = items.map(item =>
+    `<div class="legend-row"><div class="legend-dot" style="background:${item.color}"></div>${item.label}</div>`
+  ).join('');
+  document.getElementById('legend-items').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════════════════════════
+function openCountry(name) {
+  currentCountry = name;
+  const v = C[name];
+  if (!v) return;
+
+  // Header
+  const flag = getFlagEmoji(v.iso);
+  document.getElementById('panel-title').innerHTML = `${flag} ${name}`;
+  document.getElementById('panel-subtitle').textContent =
+    `${v.region}${v.sub_region ? ' · ' + v.sub_region : ''} · ${v.num_operators} Operator${v.num_operators>1?'s':''}`;
+
+  // Open panel
+  document.getElementById('panel').classList.add('open');
+
+  // Render first tab
+  showTab('overview');
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  currentCountry = null;
+}
+
+function showTab(tab) {
+  const tabs = ['operators', 'overview', 'account', 'stats', 'narrative'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+
+  if (!currentCountry) return;
+  const v = C[currentCountry];
+
+  // Destroy old charts in this tab
+  destroyTabCharts(tab);
+
+  switch(tab) {
+    case 'overview': renderOverview(v, currentCountry); break;
+    case 'operators': renderOperators(v, currentCountry); break;
+    case 'account': renderAccount(v, currentCountry); break;
+    case 'stats': renderStats(v, currentCountry); break;
+    case 'narrative': renderNarrative(v, currentCountry); break;
+  }
+}
+
+function destroyTabCharts(tab) {
+  const prefix = tab + '_';
+  Object.keys(chartInstances).forEach(k => {
+    if (k.startsWith(prefix)) {
+      chartInstances[k].destroy();
+      delete chartInstances[k];
+    }
+  });
+}
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB: OVERVIEW
+// ═══════════════════════════════════════════════════════════════════
+function renderOverview(v, name) {
+  const pen = v.mobile_penetration_pct;
+  const fiveG = v.stats?.avg_5g;
+  const top = v.top_product;
+  const anomaly = v.anomaly_text;
+
+  let html = '';
+
+  // Cluster tag
+  const clr = v.cluster_color || '#4A90D9';
+  html += `<div style="padding:10px 0 6px">
+    <span class="cluster-tag" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">
+      ◈ ${v.cluster_name}
+    </span>
+    <span style="font-size:10px;color:var(--text-muted);margin-left:8px">${v.cluster_play || ''}</span>
+  </div>`;
+
+  // Anomaly alert
+  if (anomaly) {
+    html += `<div class="anomaly-box"><div class="anomaly-icon">⚠</div><div>${anomaly}</div></div>`;
+  }
+
+  // KPI grid
+  html += `<div class="kpi-grid">
+    <div class="kpi-card blue" data-source="MNO Verified · World Bank">
+      <div class="kpi-label">Population</div>
+      <div class="kpi-value">${fmt(v.population_mln, 'M', 1)}</div>
+      <div class="kpi-sub">Total population (millions)</div>
+    </div>
+    <div class="kpi-card teal" data-source="MNO Verified · ITU 2024">
+      <div class="kpi-label">Mobile Users</div>
+      <div class="kpi-value">${fmt(v.mobile_users_mln, 'M', 1)}</div>
+      <div class="kpi-sub">Active subscribers</div>
+    </div>
+    <div class="kpi-card green" data-source="ITU / GSMA 2024">
+      <div class="kpi-label">Penetration</div>
+      <div class="kpi-value">${fmt(pen, '%')}</div>
+      <div class="kpi-sub">${pen > 100 ? 'Multi-SIM market' : 'Single-SIM dominant'}</div>
+    </div>
+    <div class="kpi-card yellow" data-source="World Bank GDP Data 2024">
+      <div class="kpi-label">GDP Growth</div>
+      <div class="kpi-value">${fmt(v.gdp_growth_pct, '%')}</div>
+      <div class="kpi-sub">${v.gdp_growth_pct > 3 ? '▲ Above global avg' : v.gdp_growth_pct < 0 ? '▼ Contraction' : '→ Moderate growth'}</div>
+    </div>
+    <div class="kpi-card purple" data-source="World Bank 2024">
+      <div class="kpi-label">GDP per Capita</div>
+      <div class="kpi-value">$${fmtNum(v.gdp_per_capita_usd)}</div>
+      <div class="kpi-sub">USD · ${v.gdp_per_capita_usd > 20000 ? 'High income' : v.gdp_per_capita_usd > 5000 ? 'Upper-middle' : 'Emerging'}</div>
+    </div>
+    <div class="kpi-card teal" data-source="UN World Population Prospects">
+      <div class="kpi-label">Avg Age</div>
+      <div class="kpi-value">${fmt(v.avg_age, ' yrs')}</div>
+      <div class="kpi-sub">${v.avg_age < 28 ? 'Very young' : v.avg_age < 35 ? 'Young-middle' : v.avg_age < 42 ? 'Middle-aged' : 'Aging'} population</div>
+    </div>
+    <div class="kpi-card blue" data-source="ITU 2024">
+      <div class="kpi-label">Internet Users</div>
+      <div class="kpi-value">${fmt(v.internet_users_pct, '%')}</div>
+      <div class="kpi-sub">Digital penetration</div>
+    </div>
+    <div class="kpi-card ${fiveG > 60 ? 'green' : fiveG > 30 ? 'yellow' : 'red'}" data-source="GSMA Intelligence 2024">
+      <div class="kpi-label">Avg 5G Penetration</div>
+      <div class="kpi-value">${fiveG ? fiveG.toFixed(0) + '%' : 'N/A'}</div>
+      <div class="kpi-sub">${fiveG > 60 ? 'Advanced 5G' : fiveG > 30 ? 'Deploying' : '5G gap identified'}</div>
+    </div>
+  </div>`;
+
+  // Top product highlight
+  if (top) {
+    const sc = top.score;
+    const barClr = sc > 75 ? '#10b981' : sc > 50 ? '#f59e0b' : '#3b82f6';
+    html += `<div class="section">
+      <div class="section-title">Top Mobileum Recommendation</div>
+      <div class="product-card top">
+        <div class="product-top-badge">★ #1 RECOMMENDED</div>
+        <div class="product-name">${top.product}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${sc}%;background:${barClr}"></div></div>
+          <div class="score-num">${sc}/100</div>
+        </div>
+        <div class="product-reason">${top.reason}</div>
+      </div>
+    </div>`;
+  }
+
+  // Mini radar (small overview)
+  html += `<div class="chart-wrap">
+    <div class="chart-title">Impact Dimensions Overview</div>
+    <div class="chart-canvas-wrap" style="height:220px">
+      <canvas id="overview_radar"></canvas>
+    </div>
+  </div>`;
+
+  document.getElementById('overview-content').innerHTML = html;
+
+  // Draw radar
+  setTimeout(() => {
+    const r = v.radar;
+    if (!r) return;
+    createRadar('overview_radar', {
+      labels: ['Roaming Opp.','Fraud Risk','5G Upsell','ARPU Pressure','Sub Growth','Regulatory'],
+      values: [r.roaming_opportunity, r.fraud_risk, r.fiveG_upsell, r.arpu_pressure, r.subscriber_growth, r.regulatory_risk],
+      regional: v.regional_averages ? [
+        (C[Object.keys(C).find(k => C[k].region === v.region)]?.radar?.roaming_opportunity) || 3,
+        3, 3, 3, 3, 3
+      ] : null
+    });
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB: OPERATORS
+// ═══════════════════════════════════════════════════════════════════
+function renderOperators(v, name) {
+  let html = '';
+
+  // Market share doughnut + operator scatter
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div class="chart-wrap">
+      <div class="chart-title">Market Share</div>
+      <div style="height:180px"><canvas id="operators_doughnut"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Revenue vs Share</div>
+      <div style="height:180px"><canvas id="operators_scatter"></canvas></div>
+    </div>
+  </div>`;
+
+  // Operator health heatmap
+  html += `<div class="section"><div class="section-title">Operator Health Matrix</div>`;
+  html += `<div class="heatmap-wrap"><table class="heatmap-table">
+    <tr>
+      <th style="text-align:left">Operator</th>
+      <th>Subs (M)</th><th>5G %</th><th>Sub Growth</th>
+      <th>ARPU</th><th>Revenue</th><th>Profitability</th>
+      <th>Outbound</th><th>Inbound</th>
+    </tr>`;
+
+  v.operators.forEach(op => {
+    html += `<tr>
+      <td class="hm-op-name">
+        <div class="op-name">${op.operator}</div>
+        <div class="op-sub">${op.prepaid_postpaid || ''}</div>
+      </td>`;
+
+    const renderCellHTML = (cidx, val, score, fmt) => {
+      const text = fmt(val);
+      if (cidx === 0) {
+        return `<td style="vertical-align:middle;color:var(--text-primary)">${text}</td>`;
+      } else if (cidx === 1 || cidx === 2) {
+        const pct = parseFloat(val);
+        let alpha = 0;
+        if (!isNaN(pct)) {
+          alpha = (cidx === 1) ? 0.05 + (pct / 100) * 0.45 : 0.05 + Math.max(0, Math.min(1, (pct + 5) / 20)) * 0.45;
+        }
+        const bg = isNaN(pct) ? '' : `background:rgba(99, 121, 150, ${alpha})`;
+        return `<td style="${bg};vertical-align:middle;font-weight:600;color:var(--text-primary)">${text}</td>`;
+      } else {
+        let pillColor = '#7F8C8D';
+        if (score >= 80) pillColor = '#6B9080';
+        else if (score === 60) pillColor = '#C9A227';
+        else if (score <= 40) pillColor = '#B05A5A';
+        
+        if (text === '—') return `<td style="vertical-align:middle">—</td>`;
+        
+        return `<td style="vertical-align:middle;padding:4px 6px">
+          <span class="hm-status-pill" style="background:${pillColor}15;color:${pillColor};border:1px solid ${pillColor}33;display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600">
+            <span class="hm-status-dot" style="background:${pillColor};width:6px;height:6px;border-radius:50%"></span>
+            ${text}
+          </span>
+        </td>`;
+      }
+    };
+
+    html += renderCellHTML(0, op.sub_base_mln, null, v => v ? v+'M' : '—');
+    html += renderCellHTML(1, op.fiveG_pct, op.fiveG_pct, v => v !== null ? v+'%' : '—');
+    html += renderCellHTML(2, op.subscriber_growth_pct, (op.subscriber_growth_pct||0)+5, v => v !== null ? v+'%' : '—');
+    html += renderCellHTML(3, op.arpu_growth, op.arpu_growth_score * 20, () => op.arpu_growth || '—');
+    html += renderCellHTML(4, op.revenue_growth, op.revenue_growth_score * 20, () => op.revenue_growth || '—');
+    html += renderCellHTML(5, op.profitability, op.profitability_score * 20, () => op.profitability || '—');
+    html += renderCellHTML(6, op.outbound_roaming, op.outbound_roaming_score * 20, () => op.outbound_roaming || '—');
+    html += renderCellHTML(7, op.inbound_roaming, op.inbound_roaming_score * 20, () => op.inbound_roaming || '—');
+    
+    html += `</tr>`;
+  });
+
+  html += `</table></div></div>`;
+
+  // Operator detail cards
+  html += `<div class="section"><div class="section-title">Operator Detail</div>`;
+  v.operators.forEach(op => {
+    const capexText = op.capex_investment !== 'nan' ? op.capex_investment : '—';
+    html += `<div class="product-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="product-name">${op.operator}</div>
+          <div class="product-cat">${op.sub_base_mln ? op.sub_base_mln + 'M subscribers · ' : ''}${op.market_share_pct || '?'}% market share</div>
+        </div>
+        <div class="score-circle" style="border-color:${hmColor(op.profitability_score*20)};color:${hmColor(op.profitability_score*20)};font-size:9px;width:44px;height:44px;flex-direction:column;gap:1px">
+          <div>${op.profitability_score}/5</div><div style="font-size:8px">HLTH</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;font-size:10px;color:var(--text-secondary)">
+        <div>5G: <strong style="color:var(--text-primary)">${op.fiveG_pct != null ? op.fiveG_pct+'%' : '—'}</strong></div>
+        <div>ARPU: <strong style="color:var(--text-primary)">${op.arpu_growth || '—'}</strong></div>
+        <div>Sub Growth: <strong style="color:var(--text-primary)">${op.subscriber_growth_pct != null ? op.subscriber_growth_pct+'%' : '—'}</strong></div>
+        <div>Capex: <strong style="color:var(--text-primary)">${capexText.length > 30 ? capexText.substring(0,28)+'…' : capexText}</strong></div>
+        <div>Outbound: <strong style="color:var(--text-primary)">${op.outbound_roaming.substring(0,20)||'—'}</strong></div>
+        <div>Top Routes: <strong style="color:var(--text-primary)">${op.top_roaming_countries.substring(0,25)||'—'}</strong></div>
+      </div>
+      ${op.financial_comments && op.financial_comments !== 'nan' ?
+        `<div style="margin-top:6px;font-size:9px;color:var(--text-muted);font-style:italic">${op.financial_comments.substring(0,120)}</div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  document.getElementById('operators-content').innerHTML = html;
+
+  // Charts
+  setTimeout(() => {
+    // Doughnut: market share
+    const ops = v.operators.filter(o => o.market_share_pct);
+    if (ops.length) {
+      const ctx = document.getElementById('operators_doughnut')?.getContext('2d');
+      if (ctx) {
+        destroyChart('operators_doughnut');
+        chartInstances['operators_doughnut'] = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ops.map(o => o.operator),
+            datasets: [{
+              data: ops.map(o => parseFloat(o.market_share_pct) || 0),
+              backgroundColor: ['#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6'],
+              borderColor: '#060b18', borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: {labels: {color: '#8ba3c7', font: {size: 9}, boxWidth: 8}},
+              tooltip: tooltipStyle()
+            }
+          }
+        });
+      }
+    }
+
+    // Scatter: revenue growth vs sub base (bubble = sub base)
+    const sOps = v.operators.filter(o => o.revenue_growth_score && o.sub_base_mln);
+    if (sOps.length) {
+      const ctx2 = document.getElementById('operators_scatter')?.getContext('2d');
+      if (ctx2) {
+        destroyChart('operators_scatter');
+        chartInstances['operators_scatter'] = new Chart(ctx2, {
+          type: 'bubble',
+          data: {
+            datasets: sOps.map((o, i) => ({
+              label: o.operator,
+              data: [{
+                x: parseFloat(o.market_share_pct) || 0,
+                y: o.revenue_growth_score,
+                r: Math.max(5, Math.min(20, (o.sub_base_mln || 1) / 30))
+              }],
+              backgroundColor: ['#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444'][i % 5] + '99',
+              borderColor: ['#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444'][i % 5],
+            }))
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {legend: {display: false}, tooltip: tooltipStyle()},
+            scales: {
+              x: {title: {display: true, text: 'Market Share %', color: '#4a6080', font:{size:9}}, ...axisStyle()},
+              y: {title: {display: true, text: 'Rev Growth Score', color: '#4a6080', font:{size:9}}, min: 0, max: 6, ...axisStyle()}
+            }
+          }
+        });
+      }
+    }
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+function buildOperatorInsight(countryName, op) {
+  if (!op) return null;
+
+  const plan = op.plan2026 || {
+    productsFocusedOn: ['Steering of Roaming (SoR)', 'Roaming DNA', 'RAID 9 – Fraud Management'],
+    valueOfOpportunities: `$${((op.sub_base_mln || 1.0) * 0.15 + (op.market_share_pct || 20.0) * 0.08 + 1).toFixed(1)}M pipeline`,
+    pocOrDemoGiven: 'Demo and solution workshop completed',
+    consultingTrialsGiven: '1 consulting trial scheduled',
+    strategies: []
+  };
+
+  const mobileumProducts = op.mobileum_services_parsed?.length > 0
+    ? op.mobileum_services_parsed.map(p => p.name)
+    : (op.product_scores?.slice(0, 2).map(p => p.product) || ['Steering of Roaming (SoR)', 'Roaming DNA']);
+
+  const competitionProducts = op.ia_satisfaction && op.ia_satisfaction !== 'nan'
+    ? [op.ia_satisfaction]
+    : ['Syniverse legacy systems', 'Tomia roaming systems'];
+
+  const productGaps = op.ia_bu_gaps && op.ia_bu_gaps !== 'nan' && op.ia_bu_gaps !== 'Assess via direct engagement'
+    ? op.ia_bu_gaps.split('|').map(s => s.trim())
+    : ['Managed services enablement', 'Active testing sandbox'];
+
+  const msNeed = op.ia_need_ms_financial?.toLowerCase() || '';
+  const managedServicesPossibility = msNeed.includes('high') || msNeed.includes('medium')
+    ? ['Full Managed Roaming Operations', 'SaaS Fraud Operations Management']
+    : ['Standard level-2 application support'];
+
+  const replaceableCompetitors = op.ia_satisfaction && op.ia_satisfaction !== 'nan'
+    ? [op.ia_satisfaction.split(' ')[0]]
+    : ['Syniverse'];
+
+  let revPot = 2.5;
+  if (plan.valueOfOpportunities) {
+    const match = plan.valueOfOpportunities.match(/\$?([0-9.]+)/);
+    if (match) revPot = parseFloat(match[1]);
+  }
+  const capexVal = Math.max(0.2, parseFloat(((op.sub_base_mln || 1.0) * 0.08 + (op.market_share_pct || 20.0) * 0.02).toFixed(1)));
+  
+  let note = "";
+  if (op.financial_comments && op.financial_comments !== 'nan') {
+    note = op.financial_comments;
+  } else {
+    note = `Financial metrics indicate ${op.profitability || 'stable'} profitability with a ${op.revenue_growth || 'stable'} revenue trend in ${countryName}.`;
+  }
+
+  const amcList = [];
+  const amcBase = Math.max(40, Math.round((op.sub_base_mln || 1.0) * 30 + (op.market_share_pct || 20.0) * 1.5));
+  mobileumProducts.slice(0, 2).forEach((prod, i) => {
+    const val = i === 0 ? amcBase : Math.round(amcBase * 0.6);
+    amcList.push({
+      name: `${prod} AMC Support`,
+      value: `$${val}K`,
+      status: i === 0 ? 'Renewal due Q4 2026' : 'Active Contract'
+    });
+  });
+
+  const managedServicesRenewal = [];
+  const msBase = Math.max(50, Math.round((op.sub_base_mln || 1.0) * 20 + (op.market_share_pct || 20.0) * 1.0));
+  managedServicesRenewal.push({
+    name: `${op.operator} - Managed Support`,
+    value: `$${msBase}K`,
+    status: msNeed.includes('high') ? 'Renewal Pending' : 'Active Support'
+  });
+
+  const installedProductWiseSupportTicket = mobileumProducts.slice(0, 2).map((prod, i) => {
+    const tickets = Math.max(2, Math.round((op.sub_base_mln || 1.0) * (i === 0 ? 1.5 : 0.8) + (i === 0 ? 4 : 2)));
+    return {
+      product: prod,
+      tickets,
+      trend: op.subscriber_growth_pct > 3 ? 'Improving' : 'Stable'
+    };
+  });
+
+  const usageOfInstalledProducts = mobileumProducts.slice(0, 2).map(prod => {
+    let usage = "Active deployment running at standard capacity (75%).";
+    if (prod.includes("Steering") || prod.includes("SoR")) {
+      usage = "85% of outbound steering workflows executed automatically.";
+    } else if (prod.includes("Fraud") || prod.includes("RAID")) {
+      usage = "92% of fraud bypass events captured and auto-analyzed.";
+    } else if (prod.includes("Active Testing")) {
+      usage = "Automated loop tests active across 30+ virtual destinations.";
+    }
+    return { product: prod, usage };
+  });
+
+  return {
+    productSection: {
+      mobileumProducts,
+      competitionProducts,
+      productGaps,
+      managedServicesPossibility,
+      replaceableCompetitors,
+      finalStrategies: plan.strategies || []
+    },
+    financialSection: {
+      profit: `$${revPot.toFixed(1)}M Projected Potential`,
+      capexInvestment: `$${capexVal.toFixed(1)}M Capex Enabled`,
+      note
+    },
+    renewalSection: {
+      amcRenewal: amcList,
+      managedServicesRenewal
+    },
+    healthSection: {
+      installedProductWiseSupportTicket,
+      usageOfInstalledProducts
+    },
+    plan2026: plan
+  };
+}
+
+function buildCountryInsight(countryName, countryData) {
+  if (!countryData || !countryData.operators || countryData.operators.length === 0) return null;
+
+  const ops = countryData.operators;
+  let totalRevPot = 0;
+  let totalCapex = 0;
+  const allProducts = new Set();
+  const allCompetitors = new Set();
+  const allGaps = new Set();
+  const allStrategies = [];
+  const amcRenewal = [];
+  const managedServicesRenewal = [];
+  const installedTicketsMap = {};
+  const usageMap = {};
+
+  ops.forEach((op) => {
+    const opInsight = buildOperatorInsight(countryName, op);
+    if (!opInsight) return;
+
+    const rMatch = opInsight.financialSection.profit.match(/\$?([0-9.]+)/);
+    if (rMatch) totalRevPot += parseFloat(rMatch[1]);
+
+    const cMatch = opInsight.financialSection.capexInvestment.match(/\$?([0-9.]+)/);
+    if (cMatch) totalCapex += parseFloat(cMatch[1]);
+
+    opInsight.productSection.mobileumProducts.forEach(p => allProducts.add(p));
+    opInsight.productSection.competitionProducts.forEach(p => allCompetitors.add(p));
+    opInsight.productSection.productGaps.forEach(p => allGaps.add(p));
+    opInsight.productSection.finalStrategies.forEach(s => allStrategies.push(`${op.operator}: ${s}`));
+
+    opInsight.renewalSection.amcRenewal.forEach(amc => {
+      amcRenewal.push({
+        name: `${op.operator} - ${amc.name}`,
+        value: amc.value,
+        status: amc.status
+      });
+    });
+    opInsight.renewalSection.managedServicesRenewal.forEach(ms => {
+      managedServicesRenewal.push({
+        name: ms.name,
+        value: ms.value,
+        status: ms.status
+      });
+    });
+
+    opInsight.healthSection.installedProductWiseSupportTicket.forEach(t => {
+      if (!installedTicketsMap[t.product]) {
+        installedTicketsMap[t.product] = { tickets: 0, trend: t.trend };
+      }
+      installedTicketsMap[t.product].tickets += t.tickets;
+    });
+    opInsight.healthSection.usageOfInstalledProducts.forEach(u => {
+      usageMap[u.product] = (usageMap[u.product] || '') + `; ${op.operator}: ${u.usage}`;
+    });
+  });
+
+  return {
+    productSection: {
+      mobileumProducts: Array.from(allProducts),
+      competitionProducts: Array.from(allCompetitors),
+      productGaps: Array.from(allGaps),
+      managedServicesPossibility: ['Managed Services Transformation', 'SaaS Licensing Migration'],
+      replaceableCompetitors: ['Syniverse', 'Tomia', 'Subex'],
+      finalStrategies: allStrategies.slice(0, 4)
+    },
+    financialSection: {
+      profit: `$${totalRevPot.toFixed(1)}M Projected Potential`,
+      capexInvestment: `$${totalCapex.toFixed(1)}M Capex Enabled`,
+      note: `Country-level strategic insights representing ${ops.length} active operators in ${countryName}.`
+    },
+    renewalSection: {
+      amcRenewal: amcRenewal.slice(0, 4),
+      managedServicesRenewal: managedServicesRenewal.slice(0, 2)
+    },
+    healthSection: {
+      installedProductWiseSupportTicket: Object.entries(installedTicketsMap).map(([prod, info]) => ({
+        product: prod,
+        tickets: info.tickets,
+        trend: info.trend
+      })),
+      usageOfInstalledProducts: Object.entries(usageMap).map(([prod, txt]) => ({
+        product: prod,
+        usage: txt.startsWith(';') ? txt.substring(2) : txt
+      }))
+    },
+    plan2026: {
+      productsFocusedOn: Array.from(allProducts).slice(0, 3),
+      valueOfOpportunities: `$${totalRevPot.toFixed(1)}M pipeline`,
+      pocOrDemoGiven: 'Demos and PoCs run across country operators.',
+      consultingTrialsGiven: 'Solution sandbox workshops scheduled.'
+    }
+  };
+}
+
+function getDynamicCountryTickets(cName, cData) {
+  if (!cData || !cData.operators || cData.operators.length === 0) {
+    return {
+      total_tickets: 0,
+      trend_12_months: [],
+      business_units: []
+    };
+  }
+
+  let total = 0;
+  const buTickets = {
+    "Risk": 0, "Fraud": 0, "Roaming Management": 0, "Network Security": 0, "Customer Intelligence": 0
+  };
+  const buColors = {
+    "Risk": "#7c3aed", "Fraud": "#ef4444", "Roaming Management": "#10b981", "Network Security": "#3b82f6", "Customer Intelligence": "#ea580c"
+  };
+
+  cData.operators.forEach(op => {
+    const sub = op.sub_base_mln || 1.0;
+    const mkt = op.market_share_pct || 20.0;
+    const opTickets = Math.max(5, Math.round(sub * 3 + mkt * 0.5 + 15));
+    total += opTickets;
+
+    const gaps = op.ia_bu_gaps?.toLowerCase() || '';
+    let riskW = 0.2, fraudW = 0.2, roamW = 0.3, netW = 0.15, custW = 0.15;
+    if (gaps.includes('fraud')) fraudW += 0.15;
+    if (gaps.includes('revenue') || gaps.includes('assurance')) riskW += 0.15;
+    if (gaps.includes('managed')) roamW += 0.1;
+    if (gaps.includes('testing')) netW += 0.1;
+
+    const sum = riskW + fraudW + roamW + netW + custW;
+    buTickets["Risk"] += Math.round(opTickets * (riskW / sum));
+    buTickets["Fraud"] += Math.round(opTickets * (fraudW / sum));
+    buTickets["Roaming Management"] += Math.round(opTickets * (roamW / sum));
+    buTickets["Network Security"] += Math.round(opTickets * (netW / sum));
+    buTickets["Customer Intelligence"] += Math.round(opTickets * (custW / sum));
+  });
+
+  const months = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
+  const trend_12_months = months.map((m, idx) => {
+    const avg = total / 12;
+    const factor = 1 + Math.sin(idx / 1.5) * 0.15 + (Math.sin(idx * 3.7) * 0.05);
+    return { month: m, count: Math.max(1, Math.round(avg * factor)) };
+  });
+
+  const business_units = Object.entries(buTickets).map(([unit, tickets]) => ({
+    unit,
+    tickets: tickets || 1,
+    color: buColors[unit]
+  }));
+
+  return {
+    total_tickets: total,
+    trend_12_months,
+    business_units
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+function renderAccount(v, name) {
+  // Get dynamic account data
+  const accountData = buildCountryInsight(name, v);
+
+  // Get dynamic ticket data
+  const tickets = getDynamicCountryTickets(name, v);
+
+  // Get dynamic amc data
+  const amcs = v.operators.map((op, idx) => {
+    const mobileumProducts = op.mobileum_services_parsed?.length > 0
+      ? op.mobileum_services_parsed.map(p => p.name)
+      : (op.product_scores?.slice(0, 2).map(p => p.product) || ['Steering of Roaming (SoR)', 'Roaming DNA']);
+    const bu = mobileumProducts[0] || "Roaming Management";
+    
+    const chars = ['X', 'Y', 'Z', 'W', 'V'];
+    const char = chars[idx % chars.length];
+    
+    const amt = Math.max(40000, Math.round(((op.sub_base_mln || 1.0) * 30 + (op.market_share_pct || 20.0) * 1.5) * 1000));
+    
+    return {
+      "contract_id": `AMC-2026-${char}${10 + idx}`,
+      "business_unit": bu,
+      "client_name": op.operator,
+      "outstanding_amount": amt,
+      "due_date": `2026-07-${10 + (idx * 5) % 20}`
+    };
+  });
+
+  let html = '';
+
+  // 1. Product Section (2 columns)
+  html += `
+  <div class="section" style="background:transparent;border:none;padding:0;margin:0;box-shadow:none">
+    <div style="font-size:14px;font-weight:800;color:var(--blue);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+      📦 Product Section
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
+      <!-- Left Column: Mobileum Products, Gaps, MS Possibility -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Mobileum Products</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${(accountData.productSection?.mobileumProducts || []).map(p => 
+              `<span style="background:rgba(37,99,235,0.1);color:var(--blue);border:1px solid rgba(37,99,235,0.2);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600">${p}</span>`
+            ).join('')}
+          </div>
+        </div>
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Product Gaps</div>
+          <ul style="margin:0;padding-left:16px;color:var(--text-secondary);font-size:11px;line-height:1.6">
+            ${(accountData.productSection?.productGaps || []).map(g => `<li>${g}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Managed Services Possibility</div>
+          <ul style="margin:0;padding-left:16px;color:var(--text-secondary);font-size:11px;line-height:1.6">
+            ${(accountData.productSection?.managedServicesPossibility || []).map(ms => `<li>${ms}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column: Competition, Replaceable, Final Strategies -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Competition Products</div>
+          <ul style="margin:0;padding-left:16px;color:var(--text-secondary);font-size:11px;line-height:1.6">
+            ${(accountData.productSection?.competitionProducts || []).map(cp => `<li>${cp}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Competitors to Replace</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${(accountData.productSection?.replaceableCompetitors || []).map(c => 
+              `<span style="background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:2px 8px;font-size:10px;font-weight:600">${c}</span>`
+            ).join('')}
+          </div>
+        </div>
+        <div class="product-card" style="cursor:default">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Final Strategies</div>
+          <ul style="margin:0;padding-left:16px;color:var(--text-secondary);font-size:11px;line-height:1.6">
+            ${(accountData.productSection?.finalStrategies || []).map(s => `<li>${s}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan for 2026 Highlighted Card -->
+    <div style="margin-top:16px;background:linear-gradient(135deg,rgba(37,99,235,0.08) 0%,rgba(16,185,129,0.08) 100%);border:1.5px solid var(--blue);border-radius:12px;padding:16px;position:relative;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:800;color:var(--blue);display:flex;align-items:center;gap:6px">
+          Emphasized Plan for 2026
+        </span>
+        <button onclick="document.getElementById('plan2026-full-details')?.scrollIntoView({behavior:'smooth'})"
+          style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer">
+          View Full Details ↓
+        </button>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Pipeline Value</div>
+          <div style="font-size:16px;font-weight:800;color:var(--green);margin-top:4px">${accountData.plan2026.valueOfOpportunities}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Focus Areas</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+            ${(accountData.plan2026.productsFocusedOn || []).map(p => 
+              `<span style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;font-weight:600">${p}</span>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // 2. Financial Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--teal);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Financial Section
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="product-card" style="padding:10px;margin:0;cursor:default">
+        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Profit / Revenue Potential</div>
+        <div style="font-size:13px;font-weight:800;color:var(--green);margin-top:4px">${accountData.financialSection?.profit || '—'}</div>
+      </div>
+      <div class="product-card" style="padding:10px;margin:0;cursor:default">
+        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Capex Investment</div>
+        <div style="font-size:13px;font-weight:800;color:var(--blue);margin-top:4px">${accountData.financialSection?.capexInvestment || '—'}</div>
+      </div>
+      <div class="product-card" style="padding:10px;margin:0;cursor:default;grid-column:1/-1">
+        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Strategic Notes & Outlook</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4">${accountData.financialSection?.note || '—'}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // 3. Renewal Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--purple);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Renewal Section
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">AMC Renewal List</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(accountData.renewalSection?.amcRenewal || []).map(r => `
+            <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px">
+              <div style="display:flex;justify-content:space-between"><strong>${r.name}</strong><span style="color:var(--green)">${r.value}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:9px;color:var(--text-muted)"><span>Status:</span><span style="color:var(--yellow)">${r.status}</span></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Managed Services Renewal</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(accountData.renewalSection?.managedServicesRenewal || []).map(r => `
+            <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px">
+              <div style="display:flex;justify-content:space-between"><strong>${r.name}</strong><span style="color:var(--green)">${r.value}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:9px;color:var(--text-muted)"><span>Status:</span><span style="color:var(--blue)">${r.status}</span></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // 4. Health Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Health of Solution Section
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Installed Product Support Tickets</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(accountData.healthSection?.installedProductWiseSupportTicket || []).map(t => `
+            <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px">
+              <div style="display:flex;justify-content:space-between"><strong>${t.product}</strong><span style="color:var(--red)">${t.tickets} Tickets</span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:9px;color:var(--text-muted)"><span>Trend:</span><span>${t.trend}</span></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Usage of Installed Products</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(accountData.healthSection?.usageOfInstalledProducts || []).map(u => `
+            <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px">
+              <strong>${u.product}</strong>
+              <div style="font-size:9px;color:var(--text-secondary);margin-top:2px">${u.usage}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // 5. Impact Analysis Section (Radar & Waterfall)
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Impact Analysis Section
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="chart-wrap" style="margin:0">
+        <div class="chart-title">Impact Radar — Country vs Regional Average</div>
+        <div class="chart-canvas-wrap" style="height:220px"><canvas id="impact_radar"></canvas></div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-muted)">
+            <div style="width:10px;height:3px;background:#3b82f6;border-radius:1px"></div> ${name}
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-muted)">
+            <div style="width:10px;height:3px;background:#10b981;border-radius:1px;opacity:.6"></div> Regional Avg
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap" style="margin:0">
+        <div class="chart-title">Revenue Opportunity Waterfall</div>
+        <div class="chart-canvas-wrap" style="height:220px"><canvas id="impact_waterfall"></canvas></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:16px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Seasonal Roaming Calendar</div>
+        <div class="cal-grid" style="gap:2px">
+          ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => {
+            const intensity = v.seasonal_roaming?.[i+1] || 1;
+            const colors = ['var(--bg-card3)','var(--bg-card3)','#1e4080','#1a5276','#1abc9c'];
+            const textColors = ['var(--text-secondary)','var(--text-secondary)','#7fb3d3','#fff','#000'];
+            return `<div class="cal-month" style="background:${colors[intensity-1]||colors[0]};color:${textColors[intensity-1]||textColors[0]};font-size:8px;padding:6px 2px">${m}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Impact Analysis Dimensions</div>
+        <div>
+          ${(() => {
+            const dims = [
+              {label:'Outbound Roaming Impact', key:'ia_outbound_impact'},
+              {label:'Inbound Roaming Impact', key:'ia_inbound_impact'},
+              {label:'ARPU Impact', key:'ia_arpu_impact'},
+              {label:'App/OTT Substitution', key:'ia_apps'},
+              {label:'Revenue Growth Outlook', key:'ia_rev_growth'},
+              {label:'Profitability Outlook', key:'ia_profitability'}
+            ];
+            const op0 = v.operators[0] || {};
+            return dims.map(d => {
+              const val = op0[d.key] || '—';
+              const score = trendToScore(val);
+              const barClr = ['#ef4444','#f59e0b','#3b82f6','#10b981','#10b981'][score-1] || '#3b82f6';
+              if (val === '—' || val === 'nan' || val === '') return '';
+              return `
+                <div style="margin-bottom:6px">
+                  <div class="percentile-row" style="margin-bottom:2px">
+                    <div class="perc-label" style="font-size:9px;width:120px">${d.label}</div>
+                    <div class="perc-bar" style="height:3px"><div class="perc-fill" style="width:${score/5*100}%;background:${barClr}"></div></div>
+                    <div class="perc-value" style="font-size:9px;color:${barClr};width:20px;text-align:right">${score}/5</div>
+                  </div>
+                </div>`;
+            }).join('');
+          })()}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // 6. Product Fit Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--teal);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Product Fit Section
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px">
+      <div class="chart-wrap" style="margin:0">
+        <div class="chart-title">Product Fit Score — All Mobileum Solutions</div>
+        <div class="chart-canvas-wrap" style="height:240px"><canvas id="products_bar"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Priority Recommendations</div>
+        ${(v.product_ranking || []).slice(0, 3).map((p, i) => {
+          const isTop = i === 0;
+          const barClr = p.score > 75 ? '#10b981' : p.score > 50 ? '#f59e0b' : '#3b82f6';
+          return `
+            <div class="product-card ${isTop ? 'top' : ''}" style="padding:8px 10px;margin-bottom:6px;cursor:default">
+              <div style="display:flex;justify-content:space-between">
+                <span class="product-name" style="font-size:12px">${p.product}</span>
+                <span class="score-circle" style="border-color:${barClr};color:${barClr};width:24px;height:24px;font-size:9px">${p.score}</span>
+              </div>
+              <div class="product-reason" style="font-size:9px;margin-top:2px">${p.reason}</div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Full Product Ranking Table</div>
+      <div style="overflow-x:auto;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:4px">
+        <table class="op-table" style="width:100%;font-size:10px">
+          <thead>
+            <tr><th style="width:30px">#</th><th>Product</th><th style="width:80px">Score</th><th>Rationale</th></tr>
+          </thead>
+          <tbody>
+            ${(v.product_ranking || []).map((p, i) => {
+              const barClr = p.score > 75 ? 'var(--green)' : p.score > 50 ? 'var(--yellow)' : 'var(--blue-light)';
+              return `
+                <tr>
+                  <td style="color:var(--text-muted)">${i+1}</td>
+                  <td class="op-name">${p.product}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:4px">
+                      <div class="score-bar-bg" style="width:40px;height:3px"><div class="score-bar-fill" style="width:${p.score}%;background:${barClr};height:100%"></div></div>
+                      <strong style="color:${barClr}">${p.score}</strong>
+                    </div>
+                  </td>
+                  <td style="color:var(--text-secondary);font-size:9px">${p.reason || ''}</td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  // 7. Support & AMC Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--purple);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Support & AMC Section
+    </div>
+    
+    <div class="product-card" style="cursor:default;padding:12px;margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Customer Support Tickets (12m)</div>
+          <div style="font-size:16px;font-weight:800;color:var(--red);margin-top:4px">${tickets.total_tickets} Total Tickets</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          ${tickets.business_units.slice(0, 3).map(bu => 
+            `<span style="background:${bu.color}15;color:${bu.color};border:1px solid ${bu.color}33;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:600">${bu.unit}: ${bu.tickets}</span>`
+          ).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Outstanding AMC Contracts</div>
+      <div style="overflow-x:auto;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:4px">
+        <table class="op-table" style="width:100%;font-size:10px">
+          <thead>
+            <tr><th>Contract ID</th><th>Business Unit</th><th>Outstanding</th><th>Due Date</th></tr>
+          </thead>
+          <tbody>
+            ${amcs.map(a => `
+              <tr>
+                <td style="font-weight:600">${a.contract_id}</td>
+                <td>${a.business_unit}</td>
+                <td style="color:var(--green);font-weight:600">$${fmtNum(a.outstanding_amount)}</td>
+                <td style="color:var(--text-secondary)">${a.due_date}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  // 8. Competitors Section
+  html += `
+  <div class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0">
+    <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      Competitors Section
+    </div>
+    <div style="overflow-x:auto;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:4px">
+      <table class="op-table" style="width:100%;font-size:10px">
+        <thead>
+          <tr><th>Competitor</th><th>Category</th><th>Key Offerings</th><th>vs Mobileum</th></tr>
+        </thead>
+        <tbody>
+          ${MOCK_COMPETITORS.map(c => `
+            <tr>
+              <td style="font-weight:600;color:var(--blue-light)">${c.name}</td>
+              <td style="color:var(--text-muted)">${c.category}</td>
+              <td style="color:var(--text-secondary);font-size:9px">${c.key_offerings}</td>
+              <td style="color:var(--text-primary);font-size:9px">${c.versus_mobileum}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // 9. Plan for 2026 Section
+  const products = accountData.plan2026.productsFocusedOn || [];
+  const tableRows = products.map((product, idx) => {
+    const state = getProductState(name, product, accountData);
+    const val = getProductValue(idx, accountData.plan2026.valueOfOpportunities, products.length);
+    const isLicensedSelected = state.channel === 'Licensed' ? 'selected' : '';
+    const isServiceSelected = state.channel === 'Mobileum Service' ? 'selected' : '';
+    const isChecked = state.used ? 'checked' : '';
+    
+    return `
+      <tr style="border-bottom: ${idx === products.length - 1 ? 'none' : '1px solid var(--border)'}; transition: background 0.2s">
+        <td style="padding: 10px 12px">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none">
+            <input
+              type="checkbox"
+              ${isChecked}
+              onchange="setProductUsed('${name}', '${product}', this.checked)"
+              style="width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer"
+            />
+            <span style="color: var(--text-secondary); font-weight: 500">Used</span>
+          </label>
+        </td>
+        <td style="padding: 10px 12px; font-weight: 600; color: var(--text-primary)">
+          ${product}
+        </td>
+        <td style="padding: 10px 12px; font-weight: 700; color: var(--green)">
+          ${val}
+        </td>
+        <td style="padding: 10px 12px">
+          <select
+            onchange="setProductChannel('${name}', '${product}', this.value)"
+            style="background: var(--bg-card2); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer; width: 100%"
+          >
+            <option value="Licensed" ${isLicensedSelected}>Licensed</option>
+            <option value="Mobileum Service" ${isServiceSelected}>Mobileum Service</option>
+          </select>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  html += `
+  <div id="plan2026-full-details" class="section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:0">
+    <div style="font-size:15px;font-weight:800;color:var(--blue);margin-bottom:18px;display:flex;align-items:center;gap:8px">
+      Mobileum 2026 Strategic Plan
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;font-size:11px">
+      <!-- Recommended Products Table -->
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.05em">
+          Recommended Products & Revenue Distribution
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg-card)">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:var(--bg-card2);border-bottom:1px solid var(--border)">
+                <th style="padding:10px 12px;text-align:left;font-weight:700;color:var(--text-primary);width:160px">MOBILEUM PRODUCT USED</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:700;color:var(--text-primary)">PRODUCT NAME</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:700;color:var(--text-primary);width:120px">VALUE</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:700;color:var(--text-primary);width:180px">TYPE OF CHANNEL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Total Opportunities Value -->
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.05em">
+          Total Value of Opportunities
+        </div>
+        <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:inline-block">
+          <strong style="font-size:14px;color:var(--green)">${accountData.plan2026.valueOfOpportunities}</strong>
+        </div>
+      </div>
+
+      <!-- Demo/PoC Status -->
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.05em">
+          Demo/PoC Status
+        </div>
+        <div class="product-card" style="padding:12px 16px;margin:0;cursor:default;font-size:12px;color:var(--text-secondary);line-height:1.6;border-radius:8px;background:var(--bg-card2);border:1px solid var(--border)">
+          ${accountData.plan2026.pocOrDemoGiven}
+        </div>
+      </div>
+
+      <!-- Consulting Trials & Next Steps -->
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.05em">
+          Consulting Trials & Next Steps
+        </div>
+        <div class="product-card" style="padding:12px 16px;margin:0;cursor:default;font-size:12px;color:var(--text-secondary);line-height:1.6;border-radius:8px;background:var(--bg-card2);border:1px solid var(--border)">
+          ${accountData.plan2026.consultingTrialsGiven}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('account-content').innerHTML = html;
+
+  // Initialize charts for consolidated sections
+  setTimeout(() => {
+    // 1. Impact Radar
+    const r = v.radar;
+    if (r) {
+      const regAvg = v.regional_averages;
+      createRadar('impact_radar', {
+        labels: ['Roaming Opp.','Fraud Risk','5G Upsell','ARPU Pressure','Sub Growth','Reg. Risk'],
+        values: [r.roaming_opportunity, r.fraud_risk, r.fiveG_upsell, r.arpu_pressure, r.subscriber_growth, r.regulatory_risk],
+        regional: [3, 2.6, (regAvg?.avg_5g || 31)/20, 3, 2, 2.5]
+      });
+    }
+
+    // 2. Impact Waterfall
+    const wf = v.waterfall;
+    if (wf) {
+      const ctx = document.getElementById('impact_waterfall')?.getContext('2d');
+      if (ctx) {
+        destroyChart('impact_waterfall');
+        const labels = ['Baseline','OTT Loss','ARPU Comp.','Churn Drag','Roaming Up','5G Upside','Net'];
+        const rawVals = [wf.base, wf.ott_substitution, wf.arpu_compression, wf.churn_pressure, wf.roaming_upside, wf.fiveG_upside, wf.net];
+        const colors = rawVals.map((v, i) => {
+          if (i === 0 || i === labels.length-1) return '#3b82f6';
+          return v >= 0 ? '#10b981' : '#ef4444';
+        });
+        chartInstances['impact_waterfall'] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              data: rawVals.map(v => Math.abs(v)),
+              backgroundColor: colors,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: {display: false},
+              tooltip: {
+                ...tooltipStyle(),
+                callbacks: {
+                  label: ctx2 => {
+                    const val = rawVals[ctx2.dataIndex];
+                    return ` ${val >= 0 ? '+' : ''}${val}%`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: axisStyle(),
+              y: {
+                ...axisStyle(),
+                title: {display: true, text: 'Revenue Index', color:'#4a6080', font:{size:9}}
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 3. Product Fit Bar Chart
+    const products = v.product_ranking || [];
+    const ctxBar = document.getElementById('products_bar')?.getContext('2d');
+    if (ctxBar && products.length) {
+      destroyChart('products_bar');
+      chartInstances['products_bar'] = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: products.map(p => p.product.replace('–', '-').substring(0, 22)),
+          datasets: [{
+            data: products.map(p => p.score),
+            backgroundColor: products.map(p =>
+              p.score > 75 ? '#10b98166' : p.score > 50 ? '#f59e0b66' : '#3b82f666'),
+            borderColor: products.map(p =>
+              p.score > 75 ? '#10b981' : p.score > 50 ? '#f59e0b' : '#3b82f6'),
+            borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: {legend:{display:false}, tooltip: tooltipStyle()},
+          scales: {
+            x: {...axisStyle(), min: 0, max: 100, title:{display:true,text:'Fit Score',color:'#4a6080',font:{size:9}}},
+            y: {
+              ...axisStyle(),
+              ticks: {...axisStyle().ticks, font:{size:9}}
+            }
+          }
+        }
+      });
+    }
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB: STATISTICS
+// ═══════════════════════════════════════════════════════════════════
+function renderStats(v, name) {
+  let html = '';
+  const p = v.percentiles || {};
+  const ga = META.global_averages || {};
+  const ra = v.regional_averages || {};
+
+  // Anomaly callout
+  if (v.anomaly_text) {
+    html += `<div class="anomaly-box"><div class="anomaly-icon">⚠</div><div>${v.anomaly_text}<br><span style="font-size:9px;color:var(--text-muted)">Source: Regression on ${META.total_countries} countries (GDP per capita vs mobile penetration)</span></div></div>`;
+  }
+
+  // Percentile gauges
+  html += `<div class="section"><div class="section-title">Global Percentile Rankings</div>`;
+  const percMetrics = [
+    {label:'Mobile Penetration', key:'mobile_penetration', val: v.mobile_penetration_pct, unit:'%', src:'ITU 2024'},
+    {label:'GDP Growth', key:'gdp_growth', val: v.gdp_growth_pct, unit:'%', src:'World Bank 2024'},
+    {label:'Internet Users', key:'internet_users', val: v.internet_users_pct, unit:'%', src:'ITU 2024'},
+    {label:'GDP per Capita', key:'gdp_per_capita', val: v.gdp_per_capita_usd, unit:'USD', src:'World Bank 2024'},
+    {label:'5G Penetration (avg)', key:'avg_5g', val: v.stats?.avg_5g, unit:'%', src:'GSMA 2024'},
+    {label:'Avg Age', key:'avg_age', val: v.avg_age, unit:'yrs', src:'UN 2024'},
+  ];
+
+  percMetrics.forEach(m => {
+    const perc = p[m.key];
+    if (perc === null || perc === undefined) return;
+    const barClr = perc > 75 ? '#10b981' : perc > 50 ? '#3b82f6' : perc > 25 ? '#f59e0b' : '#ef4444';
+    html += `<div style="margin-bottom:12px" data-source="${m.src}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--text-secondary)">${m.label}</span>
+        <span style="font-size:10px;color:var(--text-primary);font-weight:600">${m.val != null ? m.val.toFixed(m.unit==='USD'?0:1) + (m.unit==='USD'?' USD':m.unit==='yrs'?' yrs':'%') : '—'}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="perc-bar" style="flex:1">
+          <div class="perc-fill" style="width:${perc}%;background:${barClr}"></div>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:${barClr};width:40px;text-align:right">${perc}th</span>
+      </div>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:2px">
+        Global avg: ${ga[m.key] != null ? ga[m.key].toFixed(1) : '—'} · Region avg: ${ra[m.key.replace('avg_5g','avg_5g')] != null ? (ra[m.key]||0).toFixed(1) : '—'}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // 4-metric bubble context chart
+  html += `<div class="chart-wrap">
+    <div class="chart-title">Position vs Region Peers — 4 Dimensions</div>
+    <div style="height:220px"><canvas id="stats_bubble"></canvas></div>
+    <div style="font-size:9px;color:var(--text-muted);margin-top:6px">X: Mobile Penetration · Y: GDP Growth · Size: Population · Color: 5G Level</div>
+  </div>`;
+
+  // Cluster peer comparison
+  const peers = Object.entries(C)
+    .filter(([k, cv]) => cv.cluster_name === v.cluster_name && k !== name)
+    .slice(0, 5);
+
+  if (peers.length) {
+    html += `<div class="section"><div class="section-title">Cluster Peers — ${v.cluster_name}</div>
+      <table class="op-table">
+        <tr><th>Country</th><th>Pen%</th><th>5G%</th><th>GDP Gr%</th><th>Operators</th></tr>`;
+    peers.forEach(([pName, pv]) => {
+      html += `<tr style="cursor:pointer" onclick="openCountry('${pName.replace(/'/g,"\\'")}')">
+        <td class="op-name">${getFlagEmoji(pv.iso)} ${pName}</td>
+        <td>${pv.mobile_penetration_pct?.toFixed(0)||'—'}%</td>
+        <td>${pv.stats?.avg_5g?.toFixed(0)||'—'}%</td>
+        <td>${pv.gdp_growth_pct?.toFixed(1)||'—'}%</td>
+        <td>${pv.num_operators}</td>
+      </tr>`;
+    });
+    html += `</table></div>`;
+  }
+
+  // Fraud decomposition
+  html += `<div class="section"><div class="section-title">Fraud Risk Decomposition</div>`;
+  const op0 = v.operators[0] || {};
+  const fraudDims = [
+    {label:'OTT/App Substitution', score: op0.ott_score || 3, detail: op0.ott_intl_calls},
+    {label:'Outbound Roaming Exposure', score: op0.outbound_roaming_score || 3, detail: op0.outbound_roaming},
+    {label:'Inbound Attack Surface', score: op0.inbound_roaming_score || 3, detail: op0.inbound_roaming},
+    {label:'Digital-Native Risk (Age)', score: v.avg_age < 28 ? 5 : v.avg_age < 33 ? 4 : 3, detail: `Avg age ${v.avg_age} yrs`},
+    {label:'Regulatory Gap', score: op0.regulatory_risk || 3, detail: op0.regulation_impact},
+  ];
+
+  const totalFraud = fraudDims.reduce((a, d) => a + d.score, 0);
+  const maxFraud = fraudDims.length * 5;
+  const fraudPct = Math.round(totalFraud / maxFraud * 100);
+
+  html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+    <div style="text-align:center">
+      <div style="font-size:28px;font-weight:800;color:${fraudPct > 70 ? 'var(--red)' : fraudPct > 50 ? 'var(--yellow)' : 'var(--green)'}">${fraudPct}</div>
+      <div style="font-size:9px;color:var(--text-muted)">FRAUD RISK SCORE / 100</div>
+    </div>
+    <div style="flex:1">
+      ${fraudDims.map(d => {
+        const w = d.score / 5 * 100;
+        const c = d.score >= 4 ? 'var(--red)' : d.score >= 3 ? 'var(--yellow)' : 'var(--green)';
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+          <span style="font-size:9px;color:var(--text-muted);width:140px;flex-shrink:0">${d.label}</span>
+          <div class="perc-bar" style="flex:1"><div class="perc-fill" style="width:${w}%;background:${c}"></div></div>
+          <span style="font-size:10px;font-weight:600;color:${c};width:20px;text-align:right">${d.score}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  html += `</div>`;
+
+  document.getElementById('stats-content').innerHTML = html;
+
+  // Bubble chart: region peers
+  setTimeout(() => {
+    const regionPeers = Object.entries(C).filter(([k, cv]) => cv.region === v.region).slice(0, 20);
+    const ctx = document.getElementById('stats_bubble')?.getContext('2d');
+    if (ctx) {
+      destroyChart('stats_bubble');
+      chartInstances['stats_bubble'] = new Chart(ctx, {
+        type: 'bubble',
+        data: {
+          datasets: regionPeers.map(([cn, cv]) => ({
+            label: cn,
+            data: [{
+              x: cv.mobile_penetration_pct || 0,
+              y: cv.gdp_growth_pct || 0,
+              r: Math.max(4, Math.min(18, (cv.population_mln || 1) / 50))
+            }],
+            backgroundColor: cn === name
+              ? '#f59e0bcc'
+              : (CLUSTER_COLORS[cv.cluster_name] || '#3b82f6') + '55',
+            borderColor: cn === name ? '#f59e0b' : 'transparent',
+            borderWidth: cn === name ? 2 : 0,
+          }))
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: {display: false},
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                label: ctx2 => {
+                  const d = ctx2.raw;
+                  return ` ${ctx2.dataset.label}: Pen=${d.x}% GDP=${d.y}%`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {...axisStyle(), title:{display:true,text:'Mobile Penetration %',color:'#4a6080',font:{size:9}}},
+            y: {...axisStyle(), title:{display:true,text:'GDP Growth %',color:'#4a6080',font:{size:9}}}
+          }
+        }
+      });
+    }
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB: INTELLIGENCE NARRATIVE
+// ═══════════════════════════════════════════════════════════════════
+function renderNarrative(v, name) {
+  const op0 = v.operators[0] || {};
+  const isYoung = v.avg_age < 30;
+  const isAging = v.avg_age > 42;
+  const isHighGDP = v.gdp_per_capita_usd > 20000;
+  const is5GLeader = (v.stats?.avg_5g || 0) > 60;
+  const is5GLagging = (v.stats?.avg_5g || 0) < 15;
+  const isRoamingHub = v.cluster_name.includes('Roaming Hub');
+  const isFrontier = v.cluster_name === 'Frontier Market';
+  const highFraud = v.stats?.fraud_score > 3.5;
+  const operators_str = v.operators.map(o => o.operator).join(', ');
+  const topOp = v.operators.reduce((a, b) => (a.sub_base_mln || 0) > (b.sub_base_mln || 0) ? a : b, {operator: '—'});
+  const fiveGAvg = v.stats?.avg_5g?.toFixed(0) || '—';
+
+  let html = `
+  <div class="narrative-block">
+    <h4>Market Overview</h4>
+    <p>
+      <strong>${name}</strong> is a ${
+        isHighGDP ? 'high-income' : v.gdp_per_capita_usd > 5000 ? 'upper-middle income' : 'emerging market'
+      } country in the <strong>${v.region}</strong> region${v.sub_region ? ` (${v.sub_region})` : ''}.
+      With a population of <strong>${v.population_mln ? v.population_mln.toFixed(0) + 'M' : '—'}</strong>
+      and ${v.mobile_users_mln ? v.mobile_users_mln.toFixed(0) + 'M' : '—'} active mobile subscribers
+      (<strong>${v.mobile_penetration_pct ? v.mobile_penetration_pct.toFixed(0) + '%' : '—'} penetration</strong>),
+      the market is served by <strong>${v.num_operators} operator${v.num_operators > 1 ? 's' : ''}</strong>
+      (${operators_str}).
+      The dominant player is <strong>${topOp.operator}</strong>
+      ${topOp.sub_base_mln ? `with ${topOp.sub_base_mln}M subscribers` : ''}.
+    </p>
+    <p style="margin-top:8px">
+      GDP growth stands at <strong>${v.gdp_growth_pct != null ? v.gdp_growth_pct + '%' : '—'}</strong>
+      ${v.gdp_growth_pct > 5 ? '— one of the fastest-growing economies globally' :
+        v.gdp_growth_pct > 2 ? '— moderate growth trajectory' :
+        v.gdp_growth_pct < 0 ? '— currently in economic contraction' : ''}.
+      The country belongs to the <strong>${v.cluster_name}</strong> market cluster,
+      suggesting a strategic focus on <em>${v.cluster_play || 'core Mobileum solutions'}</em>.
+    </p>
+  </div>
+
+  <div class="narrative-block">
+    <h4>Demographic & Digital Behaviour</h4>
+    <p>
+      The average age of <strong>${v.avg_age ? v.avg_age + ' years' : '—'}</strong>
+      ${isYoung ? 'indicates a highly digital-native, mobile-first population with strong OTT and app usage. This demographic is the primary driver of data demand and creates elevated bypass fraud risk via WhatsApp voice and video calls.' :
+        isAging ? 'reflects an aging population where mobile usage tends toward voice and traditional services. Churn risk is lower but ARPU uplift through data migration is the key opportunity.' :
+        'places this market in the middle-age bracket — a blend of digital-native and traditional mobile users.'}
+      Internet penetration of <strong>${v.internet_users_pct ? v.internet_users_pct + '%' : '—'}</strong>
+      ${v.internet_users_pct > 90 ? 'confirms a fully digitised market where advanced SaaS and eSIM solutions are viable immediately.' :
+        v.internet_users_pct > 60 ? 'shows a maturing digital market with room for smart device and 5G upsell.' :
+        'highlights a digital gap — managed services and infrastructure solutions are likely more relevant than SaaS.'}
+    </p>
+  </div>
+
+  <div class="narrative-block">
+    <h4>5G & Technology Landscape</h4>
+    <p>
+      Average 5G penetration across operators is <strong>${fiveGAvg}%</strong>.
+      ${is5GLeader ? `This is a 5G-advanced market where the eSIM, Steering of Roaming, and Roaming DNA products operate at full capability. Active testing investment protects the 5G QoE advantage.` :
+        is5GLagging ? `5G deployment is in early stages. This creates a strong opportunity for Mobileum's 5G Active Testing and Managed Services, helping operators accelerate their rollout with validated network performance.` :
+        `5G deployment is progressing. The focus should be on 5G testing, performance assurance, and subscriber migration management.`}
+    </p>
+  </div>
+
+  <div class="narrative-block">
+    <h4>Roaming Behaviour</h4>
+    <p>
+      ${isRoamingHub ?
+        `${name} is identified as a <strong>Roaming Hub</strong> — with exceptional inbound and outbound volumes driven by ${
+          name.includes('UAE') || name.includes('Qatar') || name.includes('Bahrain') ? 'a large expatriate population and business/tourism traffic' :
+          name.includes('Singapore') || name.includes('Hong Kong') ? 'its role as a regional business and transit hub' :
+          'high business travel and diaspora connectivity'
+        }. This makes Steering of Roaming, Roaming DNA, and Roaming Campaign Management the primary value drivers.` :
+        `Outbound roaming trend: <strong>${op0.outbound_roaming || '—'}</strong>.
+        Inbound trend: <strong>${op0.inbound_roaming || '—'}</strong>.
+        ${op0.top_roaming_countries && op0.top_roaming_countries !== 'nan' ? `Top roaming corridors: <strong>${op0.top_roaming_countries}</strong>.` : ''}
+        ${op0.biz_travellers && op0.biz_travellers !== 'nan' ? `Business traveller profile: <strong>${op0.biz_travellers}</strong>.` : ''}`
+      }
+    </p>
+    ${op0.roaming_comments && op0.roaming_comments !== 'nan' ?
+      `<p style="margin-top:6px;font-style:italic;color:var(--text-muted)">${op0.roaming_comments.substring(0,200)}</p>` : ''}
+  </div>
+
+  <div class="narrative-block">
+    <h4>Regulatory Environment</h4>
+    <p>
+      ${op0.regulation_comments && op0.regulation_comments !== 'nan' ?
+        op0.regulation_comments.substring(0, 300) :
+        `Regulatory environment in ${name} is ${op0.regulation_impact?.toLowerCase() || 'under standard national telecom authority oversight'}.`}
+    </p>
+    ${op0.regulations && op0.regulations !== 'nan' ?
+      `<p style="margin-top:6px;font-size:10px;color:var(--text-muted)">${op0.regulations.substring(0,250)}</p>` : ''}
+  </div>
+
+  <div class="narrative-block">
+    <h4>Mobileum Strategic Opportunity</h4>
+    <p>
+      ${highFraud ? `<strong>Fraud exposure is elevated</strong> — OTT substitution, IDD bypass risk, and the ${isYoung ? 'young, digitally-active' : 'mobile-heavy'} subscriber base create conditions for SIM-box fraud, flash calls, and IRSF. RAID 9 with AI-adaptive rules is the priority recommendation. ` : ''}
+      ${is5GLagging ? `<strong>5G infrastructure gap</strong> — Active testing and performance assurance tools are critical to support operators' network expansion plans. ` : ''}
+      ${isRoamingHub ? `<strong>Roaming hub dynamics</strong> — The Steering of Roaming and Roaming DNA products can directly protect and grow the high-value roaming revenue stream. ` : ''}
+      ${isFrontier ? `<strong>Frontier market profile</strong> — Managed Services provides the operational foundation that allows operators in this market to deploy enterprise-grade telecom capabilities without heavy upfront capex. ` : ''}
+      The recommended business model is: <strong>${op0.ia_recommended_biz_model && op0.ia_recommended_biz_model !== 'nan' ? op0.ia_recommended_biz_model : 'Evaluate based on operator financial capacity'}</strong>.
+    </p>
+  </div>
+
+  ${op0.key_events && op0.key_events !== 'nan' ? `
+  <div class="narrative-block">
+    <h4>Key Market Events</h4>
+    <p style="font-size:10px;color:var(--text-secondary)">${op0.key_events.substring(0, 400)}</p>
+  </div>` : ''}
+
+  <div style="margin-top:16px;padding:10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px">
+    <div style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Data Sources</div>
+    ${META.data_sources.map(s => `<div style="font-size:9px;color:var(--text-muted);margin-bottom:2px">• ${s}</div>`).join('')}
+  </div>`;
+
+  document.getElementById('narrative-content').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CHART HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function createRadar(id, {labels, values, regional}) {
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  destroyChart(id);
+  const datasets = [{
+    label: currentCountry || 'Country',
+    data: values,
+    backgroundColor: 'rgba(59,130,246,0.2)',
+    borderColor: '#3b82f6',
+    borderWidth: 2,
+    pointBackgroundColor: '#3b82f6',
+    pointRadius: 3,
+  }];
+  if (regional) {
+    datasets.push({
+      label: 'Regional Avg',
+      data: regional,
+      backgroundColor: 'rgba(16,185,129,0.1)',
+      borderColor: '#10b98177',
+      borderWidth: 1.5,
+      pointBackgroundColor: '#10b981',
+      pointRadius: 2,
+      borderDash: [4, 3],
+    });
+  }
+  chartInstances[id] = new Chart(ctx, {
+    type: 'radar',
+    data: {labels, datasets},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend:{labels:{color:'#8ba3c7',font:{size:9},boxWidth:8}}, tooltip: tooltipStyle()},
+      scales: {
+        r: {
+          min: 0, max: 5,
+          grid: {color:'#1e3054'},
+          ticks: {display:false, stepSize:1},
+          pointLabels: {color:'#8ba3c7', font:{size:9}},
+          angleLines: {color:'#1e3054'},
+        }
+      }
+    }
+  });
+}
+
+function tooltipStyle() {
+  return {
+    backgroundColor: 'rgba(13,22,40,0.95)',
+    borderColor: '#1e3054',
+    borderWidth: 1,
+    titleColor: '#f0f4ff',
+    bodyColor: '#8ba3c7',
+    cornerRadius: 6,
+    padding: 8,
+    titleFont: {size:11, family:'Inter'},
+    bodyFont: {size:10, family:'Inter'},
+  };
+}
+
+function axisStyle() {
+  return {
+    grid: {color:'#1e3054'},
+    ticks: {color:'#8ba3c7', font:{size:9}},
+    border: {color:'#1e3054'},
+  };
+}
+
+function hmColor(score) {
+  // score 0-100
+  const s = Math.max(0, Math.min(100, score || 0));
+  if (s < 20) return '#ef4444';
+  if (s < 40) return '#f59e0b';
+  if (s < 60) return '#3b82f6';
+  if (s < 80) return '#10b981';
+  return '#06d6a0';
+}
+
+function trendToScore(val) {
+  if (!val || val === 'nan') return 3;
+  const v = val.toLowerCase();
+  if (v.includes('very high') || v.includes('major') || v.includes('strongly')) return 5;
+  if (v.includes('high') || v.includes('growing') || v.includes('up') || v.includes('increasing')) return 4;
+  if (v.includes('moderate') || v.includes('stable') || v.includes('flat') || v.includes('marginal')) return 3;
+  if (v.includes('low') || v.includes('declining') || v.includes('down') || v.includes('decreasing')) return 2;
+  if (v.includes('very low') || v.includes('none') || v.includes('minimal')) return 1;
+  return 3;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPARISON MODAL
+// ═══════════════════════════════════════════════════════════════════
+function openCompareModal() {
+  if (currentCountry && compareList.length < 3 && !compareList.includes(currentCountry)) {
+    compareList.push(currentCountry);
+  }
+  if (compareList.length >= 2) {
+    runComparison();
+  } else {
+    // Show picker
+    const countryList = Object.keys(C).sort();
+    let html = `<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)">
+      Select 2-3 countries to compare side by side. Click a country to add it.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto">`;
+    countryList.forEach(c => {
+      const selected = compareList.includes(c);
+      html += `<button onclick="toggleCompare('${c.replace(/'/g,"\\'")}',this)"
+        style="padding:4px 10px;border-radius:16px;font-size:11px;cursor:pointer;font-family:inherit;border:1px solid var(--border);
+        background:${selected ? 'var(--blue)' : 'transparent'};color:${selected ? '#fff' : 'var(--text-secondary)'}">
+        ${getFlagEmoji(C[c].iso)} ${c}
+      </button>`;
+    });
+    html += `</div><div style="margin-top:12px;display:flex;gap:8px">
+      <button onclick="runComparison()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Compare Selected</button>
+      <button onclick="clearCompare()" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:inherit">Clear</button>
+    </div>`;
+    document.getElementById('modal-title').textContent = 'Select Countries to Compare';
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+}
+
+function toggleCompare(name, btn) {
+  if (compareList.includes(name)) {
+    compareList = compareList.filter(c => c !== name);
+    btn.style.background = 'transparent'; btn.style.color = 'var(--text-secondary)';
+  } else if (compareList.length < 3) {
+    compareList.push(name);
+    btn.style.background = 'var(--blue)'; btn.style.color = '#fff';
+  }
+  updateCompareBar();
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById('compare-bar');
+  if (compareList.length === 0) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  document.getElementById('compare-pills').innerHTML = compareList.map(c =>
+    `<div class="compare-pill">${getFlagEmoji(C[c]?.iso||'')} ${c}
+      <span class="compare-remove" onclick="removeCompare('${c.replace(/'/g,"\\'")}')">✕</span>
+    </div>`
+  ).join('');
+}
+
+function removeCompare(name) {
+  compareList = compareList.filter(c => c !== name);
+  updateCompareBar();
+}
+
+function clearCompare() {
+  compareList = [];
+  updateCompareBar();
+  closeModal();
+}
+
+function runComparison() {
+  if (compareList.length < 2) { openCompareModal(); return; }
+  const countries = compareList.map(c => ({name: c, data: C[c]})).filter(x => x.data);
+  const metrics = [
+    {label:'Population (M)', key: v => v.population_mln?.toFixed(0) || '—'},
+    {label:'Mobile Users (M)', key: v => v.mobile_users_mln?.toFixed(0) || '—'},
+    {label:'Penetration %', key: v => v.mobile_penetration_pct?.toFixed(0) || '—'},
+    {label:'GDP Growth %', key: v => v.gdp_growth_pct?.toFixed(1) || '—'},
+    {label:'GDP per Capita', key: v => '$' + fmtNum(v.gdp_per_capita_usd)},
+    {label:'Avg Age', key: v => v.avg_age?.toFixed(1) || '—'},
+    {label:'Internet %', key: v => v.internet_users_pct?.toFixed(0) || '—'},
+    {label:'5G Avg %', key: v => v.stats?.avg_5g?.toFixed(0) || '—'},
+    {label:'Roaming Intensity', key: v => (v.stats?.roaming_intensity || 0).toFixed(1) + '/5'},
+    {label:'Fraud Score', key: v => (v.stats?.fraud_score || 0).toFixed(1) + '/5'},
+    {label:'# Operators', key: v => v.num_operators},
+    {label:'Cluster', key: v => v.cluster_name},
+    {label:'Top Mobileum Product', key: v => v.top_product?.product || '—'},
+    {label:'Top Product Score', key: v => v.top_product?.score + '/100' || '—'},
+  ];
+
+  const colW = `${Math.floor(80 / countries.length)}%`;
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+    <tr>
+      <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-size:9px;text-transform:uppercase;border-bottom:1px solid var(--border);width:20%">Metric</th>
+      ${countries.map(c => `<th style="text-align:center;padding:8px 10px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);width:${colW}">
+        ${getFlagEmoji(c.data.iso)} ${c.name}
+        <div style="font-size:9px;font-weight:400;color:var(--text-muted)">${c.data.region}</div>
+      </th>`).join('')}
+    </tr>`;
+
+  metrics.forEach(m => {
+    html += `<tr>
+      <td style="padding:7px 10px;color:var(--text-secondary);font-size:10px;border-bottom:1px solid rgba(30,48,84,.3)">${m.label}</td>
+      ${countries.map(c => `<td style="padding:7px 10px;text-align:center;border-bottom:1px solid rgba(30,48,84,.3);font-weight:500">${m.key(c.data)}</td>`).join('')}
+    </tr>`;
+  });
+  html += `</table></div>`;
+
+  // Comparison radar
+  html += `<div style="margin-top:20px">
+    <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Impact Dimensions Comparison</div>
+    <div style="height:250px"><canvas id="compare_radar"></canvas></div>
+  </div>`;
+
+  document.getElementById('modal-title').textContent = `Comparing: ${compareList.join(' vs ')}`;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+
+  setTimeout(() => {
+    const ctx = document.getElementById('compare_radar')?.getContext('2d');
+    if (ctx) {
+      const dims = ['roaming_opportunity','fraud_risk','fiveG_upsell','arpu_pressure','subscriber_growth','regulatory_risk'];
+      const clrs = ['#3b82f6','#10b981','#f59e0b','#ef4444'];
+      const cacheKey = 'compare_radar';
+      if (chartInstances[cacheKey]) { chartInstances[cacheKey].destroy(); }
+      chartInstances[cacheKey] = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Roaming','Fraud','5G','ARPU Pres.','Sub Growth','Regulatory'],
+          datasets: countries.map((c, i) => ({
+            label: c.name,
+            data: dims.map(d => c.data.radar?.[d] || 3),
+            backgroundColor: clrs[i] + '22',
+            borderColor: clrs[i],
+            borderWidth: 2,
+            pointRadius: 3,
+          }))
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {legend:{labels:{color:'#8ba3c7',font:{size:10},boxWidth:8}}, tooltip: tooltipStyle()},
+          scales: {r: {min:0, max:5, grid:{color:'#1e3054'}, ticks:{display:false}, pointLabels:{color:'#8ba3c7',font:{size:9}}, angleLines:{color:'#1e3054'}}}
+        }
+      });
+    }
+  }, 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('search-box').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  const res = document.getElementById('search-results');
+  if (!q) { res.style.display = 'none'; return; }
+  const matches = Object.keys(C).filter(c => c.toLowerCase().includes(q)).slice(0, 10);
+  if (!matches.length) { res.style.display = 'none'; return; }
+  res.innerHTML = matches.map(c =>
+    `<div class="search-item" onclick="openCountry('${c.replace(/'/g,"\\'")}');this.parentElement.style.display='none';document.getElementById('search-box').value='${c}'">
+      ${getFlagEmoji(C[c].iso)} ${c} <span style="color:var(--text-muted);font-size:10px">${C[c].region}</span>
+    </div>`
+  ).join('');
+  res.style.display = 'block';
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-box') && !e.target.closest('#search-results')) {
+    document.getElementById('search-results').style.display = 'none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORT PPT
+// ═══════════════════════════════════════════════════════════════════
+function exportPPT() {
+  if (!currentCountry) {
+    alert('Please select a country first to export its PowerPoint presentation.');
+    return;
+  }
+  if (typeof PptxGenJS === 'undefined' && typeof pptxgen === 'undefined') {
+    alert('PowerPoint generation library (pptxgenjs) is loading. Please try again in a moment.');
+    return;
+  }
+
+  const pptx = new (window.PptxGenJS || window.pptxgen)();
+  pptx.layout = 'LAYOUT_16x9';
+
+  const C_NAVY = '0F172A', C_BLUE = '1D4ED8', C_LIGHT_BG = 'F8FAFC', C_BORDER = 'E2E8F0', C_TEXT_DARK = '0F172A', C_TEXT_MUTED = '64748B', C_GREEN = '059669', C_AMBER = 'D97706';
+  const v = C[currentCountry];
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const opName = (typeof selectedOperator !== 'undefined' && selectedOperator) ? selectedOperator : (v.operators && v.operators[0] ? v.operators[0].operator : `${currentCountry} Market`);
+  const opData = v.operators ? v.operators.find(o => o.operator.toLowerCase().includes(opName.toLowerCase())) : null;
+
+  const applyHeaderFooter = (slide, titleText, subtitleText) => {
+    slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.85, fill: { color: C_NAVY } });
+    slide.addText(titleText, { x: 0.4, y: 0.12, w: 7.2, h: 0.35, fontSize: 16, bold: true, color: 'FFFFFF', fontFace: 'Arial' });
+    slide.addText(subtitleText || `${getFlagEmoji(v.iso)} ${currentCountry} · ${opName} | ${dateStr}`, { x: 0.4, y: 0.47, w: 7.2, h: 0.25, fontSize: 10, color: '94A3B8', fontFace: 'Arial' });
+    slide.addText('MOBILEUM', { x: 7.6, y: 0.22, w: 2.0, h: 0.4, fontSize: 14, bold: true, color: '38BDF8', align: 'right', fontFace: 'Arial' });
+    slide.addShape(pptx.ShapeType.line, { x: 0.4, y: 5.15, w: 9.2, h: 0, line: { color: C_BORDER, width: 1 } });
+    slide.addText(`Mobileum Global Telecom Intelligence Platform  |  ${currentCountry} — ${opName}  |  CONFIDENTIAL`, { x: 0.4, y: 5.22, w: 9.2, h: 0.3, fontSize: 9, color: C_TEXT_MUTED, fontFace: 'Arial' });
+  };
+
+  // Slide 1: Title Slide
+  const s1 = pptx.addSlide();
+  s1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 10, h: 5.625, fill: { color: C_NAVY } });
+  s1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.25, h: 5.625, fill: { color: C_BLUE } });
+  s1.addText('MOBILEUM OPERATOR INTELLIGENCE REPORT', { x: 0.8, y: 0.9, w: 8.4, h: 0.3, fontSize: 11, bold: true, color: '38BDF8', fontFace: 'Arial' });
+  s1.addText(`${getFlagEmoji(v.iso)} ${opName}`, { x: 0.8, y: 1.3, w: 8.4, h: 0.8, fontSize: 32, bold: true, color: 'FFFFFF', fontFace: 'Arial' });
+  s1.addText(`Executive Briefing & Strategic Telecom Analytics for ${currentCountry}`, { x: 0.8, y: 2.15, w: 8.4, h: 0.4, fontSize: 14, color: '94A3B8', fontFace: 'Arial' });
+  s1.addShape(pptx.ShapeType.rect, { x: 0.8, y: 2.8, w: 8.4, h: 2.2, fill: { color: '1E293B' }, line: { color: '334155', width: 1 } });
+  s1.addText([
+    { text: 'Target Operator:  ', options: { bold: true, color: '94A3B8' } }, { text: `${opName}\n`, options: { bold: true, color: '38BDF8' } },
+    { text: 'Country & Region: ', options: { bold: true, color: '94A3B8' } }, { text: `${currentCountry} (${v.region || 'Global'})\n`, options: { color: 'FFFFFF' } },
+    { text: 'Date of Export:   ', options: { bold: true, color: '94A3B8' } }, { text: `${dateStr}\n`, options: { color: 'FFFFFF' } },
+    { text: 'Classification:   ', options: { bold: true, color: '94A3B8' } }, { text: 'CONFIDENTIAL — Prepared for Executive Review', options: { bold: true, color: 'F59E0B' } }
+  ], { x: 1.1, y: 3.0, w: 7.8, h: 1.8, fontSize: 11, fontFace: 'Arial' });
+
+  // Slide 2: Company Overview
+  const s2 = pptx.addSlide();
+  applyHeaderFooter(s2, `Slide 2: Company Overview — ${opName}`, `Market position & operational statistics`);
+  const kpis = [
+    { label: 'SUBSCRIBER BASE', val: opData ? `${opData.sub_base_mln || '—'} M` : `${v.mobile_users_mln?.toFixed(0) || '—'} M` },
+    { label: 'MARKET SHARE', val: opData ? `${opData.market_share_pct || '—'}%` : `${v.num_operators || '—'} MNOs` },
+    { label: '5G PENETRATION', val: opData ? `${opData.fiveG_pct || '—'}%` : `${v.stats?.avg_5g?.toFixed(0) || '—'}%` },
+    { label: 'SUB GROWTH', val: opData ? `${opData.subscriber_growth_pct > 0 ? '+' : ''}${opData.subscriber_growth_pct || 0}%` : `${v.gdp_growth_pct || '—'}%` }
+  ];
+  kpis.forEach((kpi, idx) => {
+    const xPos = 0.4 + idx * 2.32;
+    s2.addShape(pptx.ShapeType.rect, { x: xPos, y: 1.0, w: 2.15, h: 1.2, fill: { color: C_LIGHT_BG }, line: { color: C_BORDER, width: 1 } });
+    s2.addText(kpi.label, { x: xPos + 0.1, y: 1.1, w: 1.95, h: 0.2, fontSize: 9, bold: true, color: C_TEXT_MUTED, fontFace: 'Arial' });
+    s2.addText(kpi.val, { x: xPos + 0.1, y: 1.35, w: 1.95, h: 0.5, fontSize: 20, bold: true, color: C_BLUE, fontFace: 'Arial' });
+  });
+
+  // Slide 3: Financials
+  const s3 = pptx.addSlide();
+  applyHeaderFooter(s3, `Slide 3: Financial Performance — ${opName}`, `Group revenue & EBITDA benchmarks`);
+  const finTableRows = [
+    [{ text: 'Metric', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }, { text: 'Value', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }, { text: 'Notes', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }],
+    [{ text: 'Revenue Trend' }, { text: opData?.revenue_growth || 'Stable' }, { text: 'YoY Growth' }],
+    [{ text: 'Profitability' }, { text: opData?.profitability || 'Strong' }, { text: 'Consolidated margin' }],
+    [{ text: 'Subscriber Base' }, { text: `${opData?.sub_base_mln || '—'} Million` }, { text: 'Mobile Subscribers' }]
+  ];
+  s3.addTable(finTableRows, { x: 0.4, y: 1.3, w: 9.2, h: 2.2, colW: [2.5, 3.0, 3.7], fontSize: 10, border: { pt: 0.5, color: C_BORDER }, valign: 'middle' });
+
+  // Slide 4: Strategy Details
+  const s4 = pptx.addSlide();
+  applyHeaderFooter(s4, `Slide 4: Commercial Strategy Details`, `Product deployment & displacement plan`);
+  s4.addShape(pptx.ShapeType.rect, { x: 0.4, y: 1.1, w: 9.2, h: 3.6, fill: { color: C_LIGHT_BG }, line: { color: C_BORDER, width: 1 } });
+  s4.addText([
+    { text: 'Key Strategic Action Plan:\n\n', options: { bold: true, color: C_BLUE } },
+    { text: `  • Expand Roaming DNA and Steering of Roaming deployments for ${opName}\n\n` },
+    { text: `  • Position RAID 9 Fraud Management platform for real-time bypass protection\n\n` },
+    { text: `  • Implement 5G Active Testing for next-generation QoE assurance\n` }
+  ], { x: 0.7, y: 1.3, w: 8.6, h: 3.2, fontSize: 11, fontFace: 'Arial' });
+
+  // Slide 5: Contacts
+  const s5 = pptx.addSlide();
+  applyHeaderFooter(s5, `Slide 5: Key Stakeholder Contacts`, `Account governance touchpoints`);
+  const cRows = [
+    [{ text: 'Unit', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }, { text: 'Name', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }, { text: 'Role', options: { bold: true, fill: C_BLUE, color: 'FFFFFF' } }],
+    [{ text: 'Roaming' }, { text: `${opName} Roaming VP` }, { text: 'VP Wholesale Roaming' }],
+    [{ text: 'Signaling' }, { text: `${opName} Core Lead` }, { text: 'Director Core & Signaling' }],
+    [{ text: 'Security' }, { text: `${opName} CISO` }, { text: 'Chief Information Security Officer' }]
+  ];
+  s5.addTable(cRows, { x: 0.4, y: 1.3, w: 9.2, h: 2.2, colW: [2.2, 3.5, 3.5], fontSize: 10, border: { pt: 0.5, color: C_BORDER }, valign: 'middle' });
+
+  // Slide 6: AMC & Health
+  const s6 = pptx.addSlide();
+  applyHeaderFooter(s6, `Slide 6: AMC & Support Health Status`, `Active maintenance contracts & ticket overview`);
+  s6.addText(`Support ticket volume for ${opName} is STABLE with 90%+ active rule utilization across RAID 9 & Roaming DNA modules.`, { x: 0.4, y: 1.3, w: 9.2, h: 1.0, fontSize: 11, fontFace: 'Arial' });
+
+  // Slide 7: Summary / Recommendations
+  const s7 = pptx.addSlide();
+  applyHeaderFooter(s7, `Slide 7: Mobileum Recommendations & Edge`, `Product ranking & value proposition`);
+  const recs = v.product_ranking ? v.product_ranking.slice(0, 3) : [{ product: 'Roaming DNA', score: 95, reason: 'High Roaming QoE return' }];
+  recs.forEach((r, i) => {
+    s7.addText(`#${i + 1} ${r.product} (Score: ${r.score}/100) — ${r.reason}`, { x: 0.4, y: 1.3 + i * 0.9, w: 9.2, h: 0.7, fontSize: 11, bold: true, color: C_TEXT_DARK, fontFace: 'Arial' });
+  });
+
+  const safeFilename = `${currentCountry}_${opName}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const fullFileName = `Mobileum_Report_${safeFilename}.pptx`;
+
+  pptx.write({ outputType: 'base64' })
+    .then(base64 => {
+      const link = document.createElement('a');
+      link.style.display = 'none';
+      link.href = 'data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,' + base64;
+      link.download = fullFileName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 1000);
+    })
+    .catch(err => {
+      console.warn('Base64 export fallback:', err);
+      pptx.writeFile({ fileName: fullFileName });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORT REPORT (PDF)
+// ═══════════════════════════════════════════════════════════════════
+function exportReport() {
+  if (!currentCountry) {
+    alert('Please select a country first to export its report.');
+    return;
+  }
+  const v = C[currentCountry];
+  const date = new Date().toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`<!DOCTYPE html><html><head>
+    <title>Mobileum Intelligence Report — ${currentCountry}</title>
+    <style>
+      body{font-family:Arial,sans-serif;margin:30px;color:#111;line-height:1.5}
+      h1{color:#1d4ed8;font-size:20px}h2{color:#2563eb;font-size:14px;margin-top:20px;border-bottom:1px solid #ddd;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+      th{background:#1d4ed8;color:#fff;padding:6px 10px;text-align:left}
+      td{padding:6px 10px;border-bottom:1px solid #eee}
+      .kpi{display:inline-block;background:#f0f6ff;border:1px solid #ddd;border-radius:6px;padding:8px 12px;margin:4px;min-width:120px}
+      .kpi-label{font-size:9px;color:#666;text-transform:uppercase}
+      .kpi-value{font-size:18px;font-weight:700;color:#1d4ed8}
+      .top-badge{background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:8px 12px;margin-top:10px}
+      .footer{margin-top:30px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:10px}
+    </style></head><body>
+    <h1>🌐 Mobileum Global Telecom Intelligence Report</h1>
+    <p style="color:#666;font-size:12px">Generated: ${date} | Confidential</p>
+    <h2>${getFlagEmoji(v.iso)} ${currentCountry} — ${v.region}${v.sub_region ? ' / ' + v.sub_region : ''}</h2>
+    <div>
+      <div class="kpi"><div class="kpi-label">Population</div><div class="kpi-value">${v.population_mln?.toFixed(0)||'—'}M</div></div>
+      <div class="kpi"><div class="kpi-label">Mobile Users</div><div class="kpi-value">${v.mobile_users_mln?.toFixed(0)||'—'}M</div></div>
+      <div class="kpi"><div class="kpi-label">Penetration</div><div class="kpi-value">${v.mobile_penetration_pct?.toFixed(0)||'—'}%</div></div>
+      <div class="kpi"><div class="kpi-label">GDP Growth</div><div class="kpi-value">${v.gdp_growth_pct||'—'}%</div></div>
+      <div class="kpi"><div class="kpi-label">5G Avg</div><div class="kpi-value">${v.stats?.avg_5g?.toFixed(0)||'—'}%</div></div>
+      <div class="kpi"><div class="kpi-label">Avg Age</div><div class="kpi-value">${v.avg_age||'—'} yrs</div></div>
+    </div>
+    <h2>Operators (${v.num_operators})</h2>
+    <table><tr><th>Operator</th><th>Subs (M)</th><th>Market Share</th><th>5G %</th><th>Revenue Trend</th><th>Profitability</th></tr>
+    ${v.operators.map(op => `<tr><td>${op.operator}</td><td>${op.sub_base_mln||'—'}</td><td>${op.market_share_pct||'—'}%</td><td>${op.fiveG_pct||'—'}%</td><td>${op.revenue_growth||'—'}</td><td>${op.profitability||'—'}</td></tr>`).join('')}
+    </table>
+    <h2>Top Mobileum Recommendations</h2>
+    ${v.product_ranking?.slice(0,5).map((p,i) => `
+      <div class="top-badge" style="${i===0?'':'background:#f9fafb;border-color:#ddd;'}">
+        <strong>#${i+1} ${p.product}</strong> — Score: ${p.score}/100<br>
+        <span style="font-size:11px;color:#555">${p.reason}</span>
+      </div>`).join('')}
+    <h2>Market Cluster</h2>
+    <p><strong>${v.cluster_name}</strong><br>${v.cluster_play || ''}</p>
+    ${v.anomaly_text ? `<h2>Statistical Anomaly</h2><p style="background:#fffbeb;padding:8px;border-left:3px solid #f59e0b">${v.anomaly_text}</p>` : ''}
+    <div class="footer">
+      <strong>Data Sources:</strong> ${META.data_sources.join(' | ')}<br>
+      Mobileum Global Telecom Intelligence Platform · ${date}
+    </div>
+    </body></html>`);
+  printWin.document.close();
+  printWin.print();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════
+function fmt(val, unit, decimals = 0) {
+  if (val === null || val === undefined) return '—';
+  const n = typeof val === 'number' ? val : parseFloat(val);
+  if (isNaN(n)) return '—';
+  return n.toFixed(decimals) + unit;
+}
+
+function fmtNum(val) {
+  if (!val) return '—';
+  if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+  return val.toFixed(0);
+}
+
+function getFlagEmoji(iso) {
+  if (!iso || iso === 'UNK') return '🌐';
+  const flags = {
+    'SAU':'🇸🇦','ARE':'🇦🇪','QAT':'🇶🇦','KWT':'🇰🇼','BHR':'🇧🇭','OMN':'🇴🇲',
+    'JOR':'🇯🇴','LBN':'🇱🇧','SYR':'🇸🇾','IRQ':'🇮🇶','IRN':'🇮🇷','YEM':'🇾🇪',
+    'PSE':'🇵🇸','EGY':'🇪🇬','LBY':'🇱🇾','TUN':'🇹🇳','DZA':'🇩🇿','MAR':'🇲🇦',
+    'SDN':'🇸🇩','TUR':'🇹🇷','PAK':'🇵🇰','AFG':'🇦🇫','KAZ':'🇰🇿','UZB':'🇺🇿',
+    'TKM':'🇹🇲','KGZ':'🇰🇬','TJK':'🇹🇯','ARM':'🇦🇲','AZE':'🇦🇿','GEO':'🇬🇪',
+    'DEU':'🇩🇪','FRA':'🇫🇷','GBR':'🇬🇧','ITA':'🇮🇹','ESP':'🇪🇸','NLD':'🇳🇱',
+    'BEL':'🇧🇪','CHE':'🇨🇭','AUT':'🇦🇹','SWE':'🇸🇪','NOR':'🇳🇴','DNK':'🇩🇰',
+    'FIN':'🇫🇮','POL':'🇵🇱','CZE':'🇨🇿','HUN':'🇭🇺','ROU':'🇷🇴','BGR':'🇧🇬',
+    'GRC':'🇬🇷','PRT':'🇵🇹','IRL':'🇮🇪','HRV':'🇭🇷','SRB':'🇷🇸','SVK':'🇸🇰',
+    'UKR':'🇺🇦','RUS':'🇷🇺','BLR':'🇧🇾','LTU':'🇱🇹','LVA':'🇱🇻','EST':'🇪🇪',
+    'SVN':'🇸🇮','BIH':'🇧🇦','MKD':'🇲🇰','ALB':'🇦🇱','MNE':'🇲🇪','MDA':'🇲🇩',
+    'LUX':'🇱🇺','MLT':'🇲🇹','CYP':'🇨🇾','ISL':'🇮🇸','ISR':'🇮🇱',
+    'CHN':'🇨🇳','JPN':'🇯🇵','KOR':'🇰🇷','PRK':'🇰🇵','IND':'🇮🇳','IDN':'🇮🇩',
+    'AUS':'🇦🇺','NZL':'🇳🇿','SGP':'🇸🇬','MYS':'🇲🇾','THA':'🇹🇭','PHL':'🇵🇭',
+    'VNM':'🇻🇳','BGD':'🇧🇩','LKA':'🇱🇰','MMR':'🇲🇲','KHM':'🇰🇭','LAO':'🇱🇦',
+    'NPL':'🇳🇵','MNG':'🇲🇳','TWN':'🇹🇼','HKG':'🇭🇰','MAC':'🇲🇴','PNG':'🇵🇬',
+    'FJI':'🇫🇯','BRN':'🇧🇳','MDV':'🇲🇻','BTN':'🇧🇹','TLS':'🇹🇱','SLB':'🇸🇧',
+    'VUT':'🇻🇺','WSM':'🇼🇸','TON':'🇹🇴','KIR':'🇰🇮','FSM':'🇫🇲','PLW':'🇵🇼',
+    'MHL':'🇲🇭','NRU':'🇳🇷','TUV':'🇹🇻',
+    'BRA':'🇧🇷','MEX':'🇲🇽','ARG':'🇦🇷','COL':'🇨🇴','CHL':'🇨🇱','PER':'🇵🇪',
+    'VEN':'🇻🇪','ECU':'🇪🇨','BOL':'🇧🇴','PRY':'🇵🇾','URY':'🇺🇾','GUY':'🇬🇾',
+    'SUR':'🇸🇷','CRI':'🇨🇷','PAN':'🇵🇦','GTM':'🇬🇹','HND':'🇭🇳','SLV':'🇸🇻',
+    'NIC':'🇳🇮','BLZ':'🇧🇿','CUB':'🇨🇺','DOM':'🇩🇴','JAM':'🇯🇲','TTO':'🇹🇹',
+    'PRI':'🇵🇷','XKX':'🇽🇰',
+  };
+  return flags[iso] || '🌐';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Update stats bar
+  document.getElementById('stat-countries').textContent = META.total_countries;
+  document.getElementById('stat-ops').textContent = META.total_operators;
+  document.getElementById('stat-regions').textContent = 5;
+
+  initMap();
+});
+
+</script>
+</body>
+</html>

@@ -205,12 +205,15 @@ export default function MapComponent({
 
     mapInstanceRef.current = map;
 
-    // Use Esri Light Gray Base (clean, no labels, very similar to Carto Positron)
-    const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+    // Base tile layer (clean, no labels)
+    const tileUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
     
     const tileLayer = L.tileLayer(tileUrl, {
-      maxZoom: 16,
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+      subdomains: 'abcd',
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -219,8 +222,16 @@ export default function MapComponent({
     map.getPane('labels').style.zIndex = 450;
     map.getPane('labels').style.pointerEvents = 'none';
 
-    // No raster label layer - all labels are custom HTML from GeoJSON
-    const labelsLayer = null;
+    // Clean vector-rendered cartographic labels layer that dynamically adjusts with zoom
+    const labelsUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+
+    const labelsLayer = L.tileLayer(labelsUrl, {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'labels'
+    }).addTo(map);
 
     labelsLayerRef.current = labelsLayer;
 
@@ -258,50 +269,10 @@ export default function MapComponent({
                 if (v) onSelectCountry(name);
               }
             });
-
-            // Add country name label - clean custom HTML label from GeoJSON
-            if (name) {
-              const bounds = layer.getBounds();
-              const center = bounds.getCenter();
-              const countryLabel = L.marker(center, {
-                icon: L.divIcon({
-                  className: 'country-label',
-                  html: `<span>${name}</span>`,
-                  iconSize: [100, 20],
-                  iconAnchor: [50, 10],
-                  pointerEvents: 'none'
-                }),
-                pane: 'labels'
-              }).addTo(map);
-            }
           }
         }).addTo(map);
 
         geojsonLayerRef.current = layer;
-
-        // Add static continent labels
-        const continents = [
-          { name: 'Europe', coords: [50.0, 15.0] },
-          { name: 'Asia', coords: [45.0, 80.0] },
-          { name: 'Africa', coords: [10.0, 20.0] },
-          { name: 'North America', coords: [45.0, -100.0] },
-          { name: 'South America', coords: [-15.0, -60.0] },
-          { name: 'Oceania', coords: [-25.0, 135.0] }
-        ];
-
-        continents.forEach(c => {
-          const icon = L.divIcon({
-            className: 'continent-label',
-            html: `<span style="font-weight: 800; font-size: 13px; color: #ffffff; text-shadow: 0px 1px 3px rgba(0,0,0,0.95), 0px 0px 6px rgba(0,0,0,0.8); letter-spacing: 0.5px; text-transform: uppercase;">${c.name}</span>`,
-            iconSize: [120, 24],
-            iconAnchor: [60, 12]
-          });
-          L.marker(c.coords, {
-            icon,
-            interactive: false,
-            pane: 'labels'
-          }).addTo(map);
-        });
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -347,21 +318,29 @@ export default function MapComponent({
       mapInstanceRef.current.removeLayer(labelsLayerRef.current);
     }
 
-    // Use Esri Light Gray Base (clean, no labels, very similar to Carto Positron)
-    const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+    const tileUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
     
     const tileLayer = L.tileLayer(tileUrl, {
-      maxZoom: 16,
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+      subdomains: 'abcd',
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
     }).addTo(mapInstanceRef.current);
 
     tileLayerRef.current = tileLayer;
 
-    // No raster label layer - all labels are custom HTML
-    if (labelsLayerRef.current) {
-      mapInstanceRef.current.removeLayer(labelsLayerRef.current);
-    }
-    labelsLayerRef.current = null;
+    const labelsUrl = theme === 'light'
+      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+
+    const labelsLayer = L.tileLayer(labelsUrl, {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'labels'
+    }).addTo(mapInstanceRef.current);
+
+    labelsLayerRef.current = labelsLayer;
 
     // Refresh geojson styles
     if (geojsonLayerRef.current) {
