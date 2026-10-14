@@ -205,15 +205,14 @@ export default function MapComponent({
 
     mapInstanceRef.current = map;
 
-    // Base tile layer (clean, no labels)
+    // Base tile layer (clean Esri Canvas, no API key required, zero watermarks)
     const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
     
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+      maxZoom: 16,
+      attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -222,14 +221,13 @@ export default function MapComponent({
     map.getPane('labels').style.zIndex = 450;
     map.getPane('labels').style.pointerEvents = 'none';
 
-    // Clean vector-rendered cartographic labels layer that dynamically adjusts with zoom
+    // High quality cartographic labels that do not collide at global zoom
     const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 
     const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
+      maxZoom: 16,
       pane: 'labels'
     }).addTo(map);
 
@@ -319,24 +317,22 @@ export default function MapComponent({
     }
 
     const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
     
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+      maxZoom: 16,
+      attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
     }).addTo(mapInstanceRef.current);
 
     tileLayerRef.current = tileLayer;
 
     const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 
     const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
+      maxZoom: 16,
       pane: 'labels'
     }).addTo(mapInstanceRef.current);
 

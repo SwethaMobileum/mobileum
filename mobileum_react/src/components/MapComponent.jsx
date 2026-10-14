@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { fetchHealthData } from '../utils/healthApi';
 
 const CLUSTER_COLORS = {
   'Frontier': '#E74C3C',
@@ -23,6 +24,11 @@ export default function MapComponent({
   onSelectCountry,
   theme
 }) {
+  const [globalHealthData, setGlobalHealthData] = useState(null);
+
+  useEffect(() => {
+    fetchHealthData().then(data => setGlobalHealthData(data)).catch(err => console.error("Failed to load health data for map:", err));
+  }, []);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geojsonLayerRef = useRef(null);
@@ -59,6 +65,31 @@ export default function MapComponent({
   const getCountryColor = (countryName, lens) => {
     const v = countries[countryName];
     if (!v) return theme === 'light' ? '#cbd5e1' : '#1e2d4a';
+    
+    if (lens === 'health' && globalHealthData) {
+      const normC = (c) => {
+        if (!c) return '';
+        const s = c.trim().toLowerCase();
+        if (s === 'uae' || s.includes('united arab emirates')) return 'uae';
+        if (s === 'usa' || s === 'united states' || s === 'united states of america') return 'usa';
+        if (s === 'uk' || s === 'united kingdom') return 'uk';
+        if (s === 'ivory coast' || s === "cote d'ivoire") return "cote d'ivoire";
+        if (s === 'congo' || s === 'dr congo') return 'dr congo';
+        return s;
+      };
+      const targetNorm = normC(countryName);
+
+      // Find all operators in this country and average their health
+      const countryHealths = globalHealthData.filter(h => h.country && normC(h.country) === targetNorm && h.health != null);
+      if (countryHealths.length > 0) {
+        const avgHealth = countryHealths.reduce((sum, h) => sum + parseFloat(h.health), 0) / countryHealths.length;
+        // Re-use heatmap logic or green-to-red based on score
+        if (avgHealth >= 80) return '#059669'; // Green
+        if (avgHealth >= 60) return '#D97706'; // Amber
+        return '#DC2626'; // Red
+      }
+      return theme === 'light' ? '#cbd5e1' : '#1e2d4a'; // no health data
+    }
     switch (lens) {
       case 'cluster':
         return CLUSTER_COLORS[v.cluster_name] || '#4A90D9';
@@ -174,14 +205,14 @@ export default function MapComponent({
 
     mapInstanceRef.current = map;
 
-    // Load initial tile layer based on current theme
+    // Base tile layer (clean Esri Canvas, no API key required, zero watermarks)
     const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+    
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 16,
+      attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -190,14 +221,13 @@ export default function MapComponent({
     map.getPane('labels').style.zIndex = 450;
     map.getPane('labels').style.pointerEvents = 'none';
 
-    // Add labels layer
+    // High quality cartographic labels that do not collide at global zoom
     const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 
     const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
+      maxZoom: 16,
       pane: 'labels'
     }).addTo(map);
 
@@ -241,30 +271,6 @@ export default function MapComponent({
         }).addTo(map);
 
         geojsonLayerRef.current = layer;
-
-        // Add static continent labels
-        const continents = [
-          { name: 'Europe', coords: [50.0, 15.0] },
-          { name: 'Asia', coords: [45.0, 80.0] },
-          { name: 'Africa', coords: [10.0, 20.0] },
-          { name: 'North America', coords: [45.0, -100.0] },
-          { name: 'South America', coords: [-15.0, -60.0] },
-          { name: 'Oceania', coords: [-25.0, 135.0] }
-        ];
-
-        continents.forEach(c => {
-          const icon = L.divIcon({
-            className: 'continent-label',
-            html: `<span style="font-weight: 800; font-size: 13px; color: #ffffff; text-shadow: 0px 1px 3px rgba(0,0,0,0.95), 0px 0px 6px rgba(0,0,0,0.8); letter-spacing: 0.5px; text-transform: uppercase;">${c.name}</span>`,
-            iconSize: [120, 24],
-            iconAnchor: [60, 12]
-          });
-          L.marker(c.coords, {
-            icon,
-            interactive: false,
-            pane: 'labels'
-          }).addTo(map);
-        });
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -311,24 +317,22 @@ export default function MapComponent({
     }
 
     const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+    
     const tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 16,
+      attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
     }).addTo(mapInstanceRef.current);
 
     tileLayerRef.current = tileLayer;
 
-    // Add updated labels layer
     const labelsUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 
     const labelsLayer = L.tileLayer(labelsUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19,
+      maxZoom: 16,
       pane: 'labels'
     }).addTo(mapInstanceRef.current);
 
